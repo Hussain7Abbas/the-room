@@ -68,7 +68,9 @@ public partial class KillfeedUI : CanvasLayer
             _killfeedLines.RemoveAt(i);
         }
 
-        if (_announcementLabel.Visible && now >= _announcementExpiresAt)
+        // Hidden while the results panel is up — it already says MATCH OVER and lists the MVP, and
+        // the banner drew straight across it (seen in real client frames).
+        if (_announcementLabel.Visible && (now >= _announcementExpiresAt || MatchServer.Instance.IsResults))
             _announcementLabel.Visible = false;
     }
 

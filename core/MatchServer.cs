@@ -71,13 +71,46 @@ public partial class MatchServer : Node
         _knifeTimer = TuningService.Instance.GoldenKnifeFirstSpawn;
     }
 
+    private double _clockSyncTimer;
+    private MatchState _lastSyncedState = MatchState.InProgress;
+
     public override void _PhysicsProcess(double delta)
     {
         if (!_isAuthoritative)
+        {
+            // Non-authoritative peers never run match logic — only a local display countdown
+            // between the server's clock syncs (BroadcastMatchClock), so the scoreboard timer and
+            // results countdown tick smoothly instead of jumping once a second.
+            if (_state is MatchState.InProgress or MatchState.LastCall)
+                _matchElapsed += delta;
+            else
+                _resultsTimeRemaining = Mathf.Max(0, _resultsTimeRemaining - delta);
             return;
+        }
 
         TickMatch(delta);
         TickGoldenKnife(delta);
+
+        // Before this, match state/clock/score-target/scores were server-only: on every client
+        // IsResults and IsLastCall were permanently false (so the results screen could never
+        // show), the timer never moved, clients used their OWN --config's score target, and late
+        // joiners never learned existing scores. Found by rendering real client frames. Synced
+        // once a second (late joiners, drift) and immediately on every state change.
+        _clockSyncTimer -= delta;
+        if (Net.Instance.IsServer && (_state != _lastSyncedState || _clockSyncTimer <= 0))
+        {
+            _lastSyncedState = _state;
+            _clockSyncTimer = 1.0;
+            Rpc(nameof(BroadcastMatchClock), (int)_state, _matchElapsed, _resultsTimeRemaining, _scoreTarget, SerializeScores());
+        }
+    }
+
+    private string SerializeScores()
+    {
+        var parts = new List<string>();
+        foreach (var (id, s) in _score)
+            parts.Add($"{id}:{s}");
+        return string.Join(";", parts);
     }
 
     private void TickMatch(double delta)
@@ -140,9 +173,10 @@ public partial class MatchServer : Node
         GD.Print($"[Match] Ended. {mvpText}.");
         Rpc(nameof(BroadcastAnnouncement), $"MATCH OVER — {mvpText}");
 
+        // Awards go on the results screen (KillfeedUI's ResultsPanel), not the banner: sent as
+        // successive banners, each replaced the last instantly, so only the final award was ever
+        // readable and it wiped "MATCH OVER — MVP" off the screen (seen in real client frames).
         var awards = ComputeAwards();
-        foreach (var award in awards)
-            Rpc(nameof(BroadcastAnnouncement), award);
 
         var standings = new List<(string, int)>();
         foreach (var (id, s) in _score)
@@ -408,5 +442,28 @@ public partial class MatchServer : Node
             }
         }
         LastStandings = standings;
+    }
+
+    /// <summary>Server → clients, unreliable, once a second and on every state change — see the
+    /// comment in _PhysicsProcess for the bug this fixes. Replaces the client's score table
+    /// wholesale so resets and late joins both come out right.</summary>
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
+    private void BroadcastMatchClock(int state, double matchElapsed, double resultsRemaining, int scoreTarget, string scoresJoined)
+    {
+        if (_isAuthoritative || Multiplayer.GetRemoteSenderId() != 1)
+            return;
+
+        _state = (MatchState)state;
+        _matchElapsed = matchElapsed;
+        _resultsTimeRemaining = resultsRemaining;
+        _scoreTarget = scoreTarget;
+
+        _score.Clear();
+        foreach (var entry in scoresJoined.Split(';', System.StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = entry.Split(':');
+            if (parts.Length == 2 && long.TryParse(parts[0], out var id) && int.TryParse(parts[1], out var s))
+                _score[id] = s;
+        }
     }
 }

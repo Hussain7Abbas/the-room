@@ -23,7 +23,7 @@
 ```
 0.00s  input
 0.00s  tell fires (visual: whole body flashes bright blue; audio: none yet — no asset)
-0.30s  effect: teleports 6m in the direction the caster is facing
+0.30s  effect: sweeps up to 6m in the direction the caster is facing, stopping at the first wall/pillar/player (not a teleport — see Player.ServerSweep)
 0.30s  effect ends (instant — no duration to speak of)
 ```
 
@@ -58,6 +58,6 @@
 4. **Tell audible in a 20-player fight?** Visual only right now (no audio asset) — genuinely uncertain this would read at 20 players without a sound cue. Flagging honestly rather than claiming it passes.
 5. **Creates a decision for the victim, not just an outcome?** Yes, per the "dynamic created" answer above.
 6. **Recognisable from silhouette/audio alone?** Colour only, no silhouette shape difference yet (Phase 5). Marginal pass at best.
-7. **Needs a new shared system?** No — `ServerTeleport` is a one-line addition to Player.cs, not a new system.
+7. **Needs a new shared system?** No — it uses `Player.ServerSweep`, shared with the heavy lunge. (Originally a raw teleport with no collision check, replaced once it proved able to land players inside geometry; the first replacement, `MoveAndCollide`, then measured at 0m on almost every use because a capsule resting on the floor reports the floor as its first collision.)
 
 **Verdict: mechanically sound, honestly incomplete on 4 and 6 for lack of real assets.** Good enough to validate the framework (this phase's actual goal); not good enough to ship as a real character without Phase 5 art/audio.

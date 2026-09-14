@@ -592,6 +592,39 @@ public partial class Player : CharacterBody3D
         }
     }
 
+    /// <summary>Server-only: move this capsule by `motion` in a single physics step, sliding along
+    /// the floor and stopping at walls, pillars and other players. Used by the heavy lunge and by
+    /// Blink. Both originally used MoveAndCollide, which — on a capsule resting on the floor —
+    /// reports the floor itself as the first collision and moves 0m (measured: every Blink
+    /// travelled "0.0m of 6.0m"). MoveAndSlide handles floor contact correctly.
+    /// Must be called from inside _PhysicsProcess (MoveAndSlide uses the physics delta).</summary>
+    public float ServerSweep(Vector3 motion)
+    {
+        var start = GlobalPosition;
+        var savedVelocity = Velocity;
+        var step = 1f / Mathf.Max(1, TuningService.Instance.ServerTickRateHz);
+        var flat = new Vector3(motion.X, 0f, motion.Z);
+
+        // Sub-stepped: a single 6m MoveAndSlide into the octagonal plinth's CSG trimesh
+        // occasionally left the capsule penetrating it (measured in clustered play: samples inside
+        // geometry rose from 2 to 8 of 510, plus one fall through the floor). Chunks no longer than
+        // the capsule radius keep every contact shallow; stop as soon as a chunk is mostly blocked.
+        const float maxChunk = 0.4f;
+        var chunks = Mathf.Max(1, Mathf.CeilToInt(flat.Length() / maxChunk));
+        var chunk = flat / chunks;
+        for (var i = 0; i < chunks; i++)
+        {
+            var before = GlobalPosition;
+            Velocity = chunk / step;
+            MoveAndSlide();
+            if (GlobalPosition.DistanceTo(before) < chunk.Length() * 0.25f)
+                break;
+        }
+
+        Velocity = savedVelocity;
+        return GlobalPosition.DistanceTo(start);
+    }
+
     private void ResolveMeleeAttack(bool isHeavy)
     {
         var tuning = TuningService.Instance;
@@ -601,7 +634,7 @@ public partial class Player : CharacterBody3D
         {
             // The lunge itself: close the gap toward whatever's in front, stopping on collision
             // so it can't be used to phase through walls/pillars.
-            MoveAndCollide(forward * tuning.HeavyLungeRange);
+            ServerSweep(forward * tuning.HeavyLungeRange);
         }
 
         var range = isHeavy ? tuning.HeavyLungeRange : tuning.LightRange;
@@ -975,6 +1008,14 @@ public partial class Player : CharacterBody3D
     /// character art. Self-frees after a few seconds.</summary>
     private static void SpawnDeathEffect(Vector3 position)
     {
+        // Cosmetic only — never on the dedicated server. BroadcastKill is CallLocal, so the
+        // server used to spawn its own physical corpse too, and live players' authoritative
+        // movement got blocked by it (seen in a sweep diagnostic: "blockedBy=[@RigidBody3D@7]")
+        // while every client showed its own corpse somewhere else — an unexplainable stop,
+        // which Pillar 2 forbids.
+        if (Net.Instance.IsServer)
+            return;
+
         var tree = (SceneTree)Engine.GetMainLoop();
         var root = tree.CurrentScene;
         if (root is null) return;
@@ -984,7 +1025,9 @@ public partial class Player : CharacterBody3D
         // offset — on a node not yet in the tree that read fails (logs a harmless-but-noisy
         // engine error and falls back to identity). Local == global with no parent, so this is
         // equivalent and avoids the tree dependency entirely.
-        var body = new RigidBody3D { Position = position + Vector3.Up * 0.3f };
+        // Layer 2, mask 1: the corpse lands on the world but nothing on layer 1 (players, the
+        // world) ever collides with it — it can't block, push, or be stood on by anyone.
+        var body = new RigidBody3D { Position = position + Vector3.Up * 0.3f, CollisionLayer = 2, CollisionMask = 1 };
         var shape = new CollisionShape3D { Shape = new CapsuleShape3D { Radius = 0.35f, Height = 1.6f } };
         var mesh = new MeshInstance3D { Mesh = new CapsuleMesh { Radius = 0.35f, Height = 1.6f } };
         body.AddChild(shape);

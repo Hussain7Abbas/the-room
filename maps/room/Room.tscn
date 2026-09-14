@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=15 format=3]
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1
@@ -12,6 +12,43 @@ albedo_color = Color(0.35, 0.35, 0.38, 1)
 
 [sub_resource type="StandardMaterial3D" id="Mat_Wall"]
 albedo_color = Color(0.5, 0.18, 0.2, 1)
+
+[sub_resource type="BoxShape3D" id="Shape_Floor"]
+size = Vector3(40, 1, 40)
+
+[sub_resource type="BoxShape3D" id="Shape_WallNorth"]
+size = Vector3(40, 6, 1)
+
+[sub_resource type="BoxShape3D" id="Shape_WallSouth"]
+size = Vector3(40, 6, 1)
+
+[sub_resource type="BoxShape3D" id="Shape_WallEast"]
+size = Vector3(1, 6, 40)
+
+[sub_resource type="BoxShape3D" id="Shape_WallWest"]
+size = Vector3(1, 6, 40)
+
+[sub_resource type="CylinderShape3D" id="Shape_CenterPlinth"]
+radius = 2.0
+height = 1.0
+
+[sub_resource type="CylinderShape3D" id="Shape_Pillar1"]
+radius = 1.0
+height = 3.0
+
+[sub_resource type="CylinderShape3D" id="Shape_Pillar2"]
+radius = 1.0
+height = 3.0
+
+[sub_resource type="CylinderShape3D" id="Shape_Pillar3"]
+radius = 1.0
+height = 3.0
+
+[sub_resource type="BoxShape3D" id="Shape_Ramp"]
+size = Vector3(6, 0.3, 8)
+
+[sub_resource type="BoxShape3D" id="Shape_RampPlatform"]
+size = Vector3(6, 0.3, 3)
 
 [node name="Room" type="Node3D"]
 
@@ -28,31 +65,26 @@ shadow_enabled = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 size = Vector3(40, 1, 40)
 material = SubResource("Mat_Floor")
-use_collision = true
 
 [node name="WallNorth" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, -20)
 size = Vector3(40, 6, 1)
 material = SubResource("Mat_Wall")
-use_collision = true
 
 [node name="WallSouth" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 20)
 size = Vector3(40, 6, 1)
 material = SubResource("Mat_Wall")
-use_collision = true
 
 [node name="WallEast" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 3, 0)
 size = Vector3(1, 6, 40)
 material = SubResource("Mat_Wall")
-use_collision = true
 
 [node name="WallWest" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 3, 0)
 size = Vector3(1, 6, 40)
 material = SubResource("Mat_Wall")
-use_collision = true
 
 ; --- Center plinth (contested Golden Knife spot, GDD §5.4) ---
 
@@ -62,7 +94,6 @@ radius = 2.0
 height = 1.0
 sides = 8
 material = SubResource("Mat_Floor")
-use_collision = true
 
 ; --- Pillars: break sightlines across the room ---
 
@@ -71,21 +102,18 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1.5, 8)
 radius = 1.0
 height = 3.0
 material = SubResource("Mat_Wall")
-use_collision = true
 
 [node name="Pillar2" type="CSGCylinder3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 1.5, 8)
 radius = 1.0
 height = 3.0
 material = SubResource("Mat_Wall")
-use_collision = true
 
 [node name="Pillar3" type="CSGCylinder3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -10)
 radius = 1.0
 height = 3.0
 material = SubResource("Mat_Wall")
-use_collision = true
 
 ; --- One ramp: verticality test (GDD open question) ---
 
@@ -93,13 +121,11 @@ use_collision = true
 transform = Transform3D(1, 0, 0, 0, 0.9848, -0.1736, 0, 0.1736, 0.9848, -14, 1, -14)
 size = Vector3(6, 0.3, 8)
 material = SubResource("Mat_Floor")
-use_collision = true
 
 [node name="RampPlatform" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 2, -18.5)
 size = Vector3(6, 0.3, 3)
 material = SubResource("Mat_Floor")
-use_collision = true
 
 ; --- Spawn points: kept away from center, spread around perimeter ---
 
@@ -112,7 +138,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 1, 15)
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -15, 1, 15)
 
 [node name="Spawn3" type="Marker3D" parent="SpawnPoints"]
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -15, 1, -15)
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -15, 1, -5)
 
 [node name="Spawn4" type="Marker3D" parent="SpawnPoints"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 1, -15)
@@ -122,3 +148,58 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 16)
 
 [node name="Spawn6" type="Marker3D" parent="SpawnPoints"]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 1, -16)
+
+[node name="Collision" type="StaticBody3D" parent="Floor"]
+
+[node name="Shape" type="CollisionShape3D" parent="Floor/Collision"]
+shape = SubResource("Shape_Floor")
+
+[node name="Collision" type="StaticBody3D" parent="WallNorth"]
+
+[node name="Shape" type="CollisionShape3D" parent="WallNorth/Collision"]
+shape = SubResource("Shape_WallNorth")
+
+[node name="Collision" type="StaticBody3D" parent="WallSouth"]
+
+[node name="Shape" type="CollisionShape3D" parent="WallSouth/Collision"]
+shape = SubResource("Shape_WallSouth")
+
+[node name="Collision" type="StaticBody3D" parent="WallEast"]
+
+[node name="Shape" type="CollisionShape3D" parent="WallEast/Collision"]
+shape = SubResource("Shape_WallEast")
+
+[node name="Collision" type="StaticBody3D" parent="WallWest"]
+
+[node name="Shape" type="CollisionShape3D" parent="WallWest/Collision"]
+shape = SubResource("Shape_WallWest")
+
+[node name="Collision" type="StaticBody3D" parent="CenterPlinth"]
+
+[node name="Shape" type="CollisionShape3D" parent="CenterPlinth/Collision"]
+shape = SubResource("Shape_CenterPlinth")
+
+[node name="Collision" type="StaticBody3D" parent="Pillar1"]
+
+[node name="Shape" type="CollisionShape3D" parent="Pillar1/Collision"]
+shape = SubResource("Shape_Pillar1")
+
+[node name="Collision" type="StaticBody3D" parent="Pillar2"]
+
+[node name="Shape" type="CollisionShape3D" parent="Pillar2/Collision"]
+shape = SubResource("Shape_Pillar2")
+
+[node name="Collision" type="StaticBody3D" parent="Pillar3"]
+
+[node name="Shape" type="CollisionShape3D" parent="Pillar3/Collision"]
+shape = SubResource("Shape_Pillar3")
+
+[node name="Collision" type="StaticBody3D" parent="Ramp"]
+
+[node name="Shape" type="CollisionShape3D" parent="Ramp/Collision"]
+shape = SubResource("Shape_Ramp")
+
+[node name="Collision" type="StaticBody3D" parent="RampPlatform"]
+
+[node name="Shape" type="CollisionShape3D" parent="RampPlatform/Collision"]
+shape = SubResource("Shape_RampPlatform")

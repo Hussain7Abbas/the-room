@@ -45,7 +45,7 @@ public static class CharacterRegistry
             StrongAxis = PowerAxis.Movement,
             WeakAxis = PowerAxis.None,
             UsesCooldown = true,
-            TellDescription = "A bright blue flash on the caster's whole body, 0.3s before the teleport lands (no audio asset yet — Phase 5).",
+            TellDescription = "A bright blue flash on the caster's whole body, 0.3s before the blink moves them (no audio asset yet — Phase 5).",
             CounterplaySentence = "You can reposition, attack, or parry during the 0.3s flash before the blink actually happens — it's not instant, and it doesn't grant any damage, healing, or invulnerability.",
             DynamicCreated = "Forces the victim to decide, the instant they see the flash, whether to commit to a punish on a now-repositioning target or hold their spacing — guessing wrong either way costs them something.",
             FailureCase = "Useless as a panic button mid-exchange: the 0.3s tell means anyone already swinging at you will land their hit before you're gone. It only helps you get TO or AWAY FROM a fight that hasn't started yet.",

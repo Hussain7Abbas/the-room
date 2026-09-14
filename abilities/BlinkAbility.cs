@@ -18,12 +18,11 @@ public sealed class BlinkAbility : Ability
         var range = TuningService.Instance.GetAbilityNumber(Def.Id, "range", 6f);
         var forward = -Caster.GlobalTransform.Basis.Z.Normalized();
 
-        // Grey-box simplification: no collision check on the teleport itself (a real blink
-        // would want to clamp to the nearest clear point if the target is inside geometry) —
-        // fine for a Phase 3 framework example, worth revisiting before this ships on a real
-        // character with a real map to abuse.
-        var target = Caster.GlobalPosition + forward * range;
-        GD.Print($"[Ability] {Main.GetPlayerName(Caster.PeerId)} blinked {range:F1}m.");
-        Caster.ServerTeleport(target);
+        // Sweep the actual capsule instead of teleporting (the Phase 3 version had no collision
+        // check at all and could land a player INSIDE a pillar or the centre plinth, whose CSG
+        // trimesh colliders can't push a body back out). Player.ServerSweep slides along the floor
+        // and stops at the first wall/pillar/player — shared with the heavy lunge. Still instant.
+        var travelled = Caster.ServerSweep(forward * range);
+        GD.Print($"[Ability] {Main.GetPlayerName(Caster.PeerId)} blinked {travelled:F1}m (of {range:F1}m).");
     }
 }
