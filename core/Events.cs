@@ -16,8 +16,13 @@ public partial class Events : Node
     [Signal] public delegate void PlayerDisconnectedEventHandler(long peerId);
     [Signal] public delegate void PlayerSpawnedEventHandler(long peerId);
 
-    // Populated from Phase 2 onward:
-    // PlayerDamaged, PlayerKilled, AbilityUsed, BountyAnnounced, GoldenKnifePickedUp, LastCallStarted, MatchEnded...
+    /// <summary>Emitted locally on every client once it receives the server's kill broadcast
+    /// (Player.BroadcastKill), so UI (killfeed/scoreboard) doesn't need a direct Player reference.
+    /// method is one of "light" | "heavy" | "execute" (Phase 2 grey-box verbs).</summary>
+    [Signal] public delegate void PlayerKilledEventHandler(long killerId, long victimId, string method);
+
+    // Populated from Phase 3 onward:
+    // AbilityUsed, BountyAnnounced, GoldenKnifePickedUp, LastCallStarted, MatchEnded...
 
     public override void _Ready()
     {

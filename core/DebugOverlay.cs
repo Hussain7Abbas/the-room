@@ -67,8 +67,9 @@ public partial class DebugOverlay : CanvasLayer
         if (_localPlayer is not null)
         {
             text.AppendLine(
-                $"Stabs — predicted: {_localPlayer.PredictedStabCount}  " +
-                $"confirmed: {_localPlayer.ConfirmedStabCount}  " +
+                $"HP: {_localPlayer.HealthFraction * 100f:F0}%   " +
+                $"Attacks — requested: {_localPlayer.AttackRequestCount}  " +
+                $"confirmed: {_localPlayer.ConfirmedHitCount}  " +
                 $"last rewind: {_localPlayer.LastRewindMs:F0}ms");
         }
 

@@ -18,9 +18,14 @@ public partial class Main : Node3D
     private readonly List<Marker3D> _spawnMarkers = new();
     private int _nextSpawnIndex;
 
-    // Static so Player.cs can grab a respawn point (network-spike stab loop, core/CombatServer.cs)
-    // without needing a scene-tree reference back to Main.
+    // Static so Player.cs can grab a respawn point (core/CombatServer.cs, death/respawn) without
+    // needing a scene-tree reference back to Main.
     private static readonly List<Marker3D> _staticSpawnMarkers = new();
+
+    // Static peer id -> display name, for UI (killfeed/scoreboard) that has no Player reference.
+    private static readonly Dictionary<long, string> _playerNames = new();
+    public static IReadOnlyDictionary<long, string> PlayerNames => _playerNames;
+    public static string GetPlayerName(long peerId) => _playerNames.TryGetValue(peerId, out var n) ? n : $"Player {peerId}";
 
     public override void _Ready()
     {
@@ -90,6 +95,8 @@ public partial class Main : Node3D
         }
 
         var isLocalPlayer = Net.Instance.IsOffline || peerId == Multiplayer.GetUniqueId();
-        player.SetDisplayName(isLocalPlayer ? Net.Instance.LocalPlayerName : $"Player {peerId}");
+        var displayName = isLocalPlayer ? Net.Instance.LocalPlayerName : $"Player {peerId}";
+        player.SetDisplayName(displayName);
+        _playerNames[peerId] = displayName;
     }
 }

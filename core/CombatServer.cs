@@ -6,12 +6,13 @@ namespace TheRoom.Core;
 
 /// <summary>
 /// Autoload ("CombatServer" in project.godot), server-side only. Keeps a short rolling history
-/// of every player's position (Tuning.MaxRewindTimeSeconds deep) and resolves the Phase 1
-/// network-spike "stab" verb against it with favor-the-shooter lag compensation: the attacker
-/// stays at their current authoritative position, every other player is rewound to where they
-/// were `rewindSeconds` ago before the hit check runs. See plan/phase-1-network-spike.md.
-/// This whole temporary verb — and the Tuning.Stab* numbers it reads — gets replaced by the
-/// real melee system in Phase 2 (light/heavy/parry/dash).
+/// of every player's position (Tuning.MaxRewindTimeSeconds deep) and resolves melee hits
+/// (light/heavy — see Player.cs's combat state machine) against it with favor-the-shooter lag
+/// compensation: the attacker stays at their current authoritative position, every other player
+/// is rewound to where they were `rewindSeconds` ago before the hit check runs.
+/// Proven against a real WAN connection during the Phase 1 network spike (see
+/// plan/phase-1-network-spike.md) using a placeholder single verb; Phase 2 is the first real
+/// consumer, with per-verb range/radius.
 /// </summary>
 public partial class CombatServer : Node
 {
@@ -66,13 +67,21 @@ public partial class CombatServer : Node
         }
     }
 
-    /// <returns>The peer id of the hit victim, or null if the stab connected with nobody.</returns>
-    public long? TryResolveStab(long attackerId, Vector3 attackerPos, Vector3 attackerForward, float rewindSeconds)
+    /// <summary>
+    /// Cone-shaped melee hit check: the closest rewound victim within `range` in front of the
+    /// attacker and within `hitRadius` laterally. `range`/`hitRadius` let light and heavy share
+    /// this one implementation despite having different reach (Tuning.Light*/Heavy* in Player.cs).
+    /// </summary>
+    /// <returns>The peer id of the closest hit victim, or null if nobody was in the cone.</returns>
+    public long? TryResolveMeleeHit(long attackerId, Vector3 attackerPos, Vector3 attackerForward, float range, float hitRadius, float rewindSeconds)
     {
         var tuning = TuningService.Instance;
         rewindSeconds = Mathf.Clamp(rewindSeconds, 0f, tuning.MaxRewindTimeSeconds);
         double targetTime = Time.GetTicksMsec() / 1000.0 - rewindSeconds;
         var forward = attackerForward.Normalized();
+
+        long? closestPeerId = null;
+        var closestDistance = float.MaxValue;
 
         foreach (var peerId in _players.Keys)
         {
@@ -84,15 +93,33 @@ public partial class CombatServer : Node
             var rewoundPos = SampleAt(samples, targetTime);
             var toTarget = rewoundPos - attackerPos;
             var forwardDistance = toTarget.Dot(forward);
-            if (forwardDistance < 0f || forwardDistance > tuning.StabRange)
+            if (forwardDistance < 0f || forwardDistance > range)
                 continue;
 
             var lateral = (toTarget - forward * forwardDistance).Length();
-            if (lateral <= tuning.StabHitRadius)
-                return peerId;
+            if (lateral > hitRadius)
+                continue;
+
+            if (forwardDistance < closestDistance)
+            {
+                closestDistance = forwardDistance;
+                closestPeerId = peerId;
+            }
         }
 
-        return null;
+        return closestPeerId;
+    }
+
+    /// <summary>The rewound position used for hit-resolution, exposed for execute's
+    /// "was the attacker behind the victim" angle check (Player.cs).</summary>
+    public Vector3? GetRewoundPosition(long peerId, float rewindSeconds)
+    {
+        if (!_history.TryGetValue(peerId, out var samples) || samples.Count == 0)
+            return null;
+
+        rewindSeconds = Mathf.Clamp(rewindSeconds, 0f, TuningService.Instance.MaxRewindTimeSeconds);
+        double targetTime = Time.GetTicksMsec() / 1000.0 - rewindSeconds;
+        return SampleAt(samples, targetTime);
     }
 
     private static Vector3 SampleAt(List<Sample> samples, double time)

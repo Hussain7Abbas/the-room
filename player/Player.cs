@@ -7,20 +7,23 @@ namespace TheRoom.Entities;
 /// <summary>
 /// Player controller with three distinct simulation roles depending on who's looking at it
 /// (see plan/phase-1-network-spike.md):
-///   - Server: always runs the ONE authoritative physics simulation, driven by the latest
-///     input received from the owning client.
+///   - Server: always runs the ONE authoritative physics + combat simulation, driven by the
+///     latest input received from the owning client.
 ///   - Owning client: predicts movement locally from real input (zero perceived latency),
 ///     sends that input to the server, and reconciles toward the server's periodic
-///     corrections when they disagree.
+///     corrections when they disagree. Combat verbs are NOT predicted — they go straight to
+///     the server and wait for the result (Pillar 2: every hit must be explainable, so a
+///     locally-guessed hit that gets overruled would be exactly the wrong kind of "fun").
 ///   - Every other client (watching a peer that isn't them and isn't the server): runs no
 ///     physics at all — just interpolates visually between buffered server snapshots,
 ///     delayed by Tuning.InterpolationDelaySeconds.
-/// Offline mode (no MultiplayerPeer) skips all of the above and behaves like Phase 0: predict
-/// only, no server, no reconciliation.
+/// Offline mode (no MultiplayerPeer) skips all of the above and behaves like a single predicting
+/// client with no server round-trip at all — combat resolves locally and instantly.
 ///
-/// Also carries the Phase-1 network-spike-only "stab" verb: a single fixed-damage melee check
-/// with server-side rewind lag compensation, entirely temporary — Phase 2 replaces it with the
-/// real light/heavy/parry/dash system.
+/// Combat (Phase 2, GDD §5.2 / CHARACTER-SPEC.md grammar): a server-authoritative state machine
+/// per player — Idle → {LightWindup, HeavyWindup, Parrying} → Recovery/Staggered/Executing →
+/// Idle, plus a terminal Dead state. Hit resolution reuses the rewind lag-compensation proven in
+/// Phase 1 (core/CombatServer.cs), parameterized per verb.
 /// </summary>
 public partial class Player : CharacterBody3D
 {
@@ -30,9 +33,12 @@ public partial class Player : CharacterBody3D
     [Export] public float MaxPitchDegrees = 70f;
 
     [Export] public NodePath SpringArmPath = "CameraPivot/SpringArm3D";
+    [Export] public NodePath MeshPath = "MeshInstance3D";
     [Export] public Label3D? NameLabel;
 
     private SpringArm3D _springArm = null!;
+    private MeshInstance3D? _meshInstance;
+    private StandardMaterial3D? _meshMaterial;
     private float _pitchRadians;
 
     // --- role, decided once in _Ready ---
@@ -66,27 +72,56 @@ public partial class Player : CharacterBody3D
         public RemoteSnapshot(double receivedAt, Vector3 position, float yaw) { ReceivedAt = receivedAt; Position = position; YawRadians = yaw; }
     }
 
-    // --- network-spike stab verb (all roles keep their own cooldown; server's is authoritative) ---
-    private float _stabCooldownRemaining;
+    // --- combat state machine (authoritative on the server; every peer's own copy of ITS OWN
+    // node also mirrors it locally purely to gate re-sending an input the server will reject
+    // anyway — never trusted for hit outcomes) ---
+    private enum CombatState { Idle, LightWindup, HeavyWindup, Recovery, Parrying, Staggered, Executing, Dead }
+    private enum Verb { Light, Heavy, Parry, Dash }
+
+    private CombatState _combatState = CombatState.Idle;
+    private float _stateTimer;
+    private float _parryCooldownRemaining;
+    private float _dashCooldownRemaining;
+    private float _spawnProtectionRemaining;
     private float _health;
+
+    // Dash is a pure movement override, independent of _combatState (GDD §5.1: spacing tool,
+    // no i-frames, doesn't interact with the attack grammar at all).
+    private Vector3 _dashVelocity;
+    private float _dashTimeRemaining;
+
+    public bool IsDead => _combatState == CombatState.Dead;
+    public bool IsSpawnProtected => _spawnProtectionRemaining > 0f;
+    public float HealthFraction => Mathf.Clamp(_health / Mathf.Max(1f, TuningService.Instance.MaxHealth), 0f, 1f);
 
     // --- bot AI (owning client with --bot; see core/Net.cs) ---
     private Vector2 _botMoveInput;
     private Vector3 _botTarget;
     private double _botRetargetIn;
-    private double _botStabIn;
+    private double _botVerbIn;
 
     // --- debug overlay stats (owning client only, see core/DebugOverlay.cs) ---
-    public int PredictedStabCount { get; private set; }
-    public int ConfirmedStabCount { get; private set; }
+    public int AttackRequestCount { get; private set; }
+    public int ConfirmedHitCount { get; private set; }
     public float LastRewindMs { get; private set; }
     public bool IsLocallyControlled => _isOwner;
     public bool IsBotControlled => _isBot;
     public string RoleLabel => _isServer ? "Server" : _isOffline ? "Offline" : _isBot ? "Bot" : _isOwner ? "Client (owner)" : "Remote view";
 
+    // --- death cam (owning client only) ---
+    private float _deathCamRemaining;
+    private Vector3 _deathCamLookAt;
+
     public override void _Ready()
     {
         _springArm = GetNode<SpringArm3D>(SpringArmPath);
+        _meshInstance = GetNodeOrNull<MeshInstance3D>(MeshPath);
+        if (_meshInstance?.GetActiveMaterial(0) is StandardMaterial3D baseMat)
+        {
+            _meshMaterial = (StandardMaterial3D)baseMat.Duplicate();
+            _meshInstance.SetSurfaceOverrideMaterial(0, _meshMaterial);
+        }
+
         _health = TuningService.Instance.MaxHealth;
         _peerId = long.TryParse(Name, out var parsedId) ? parsedId : GetMultiplayerAuthority();
 
@@ -113,6 +148,8 @@ public partial class Player : CharacterBody3D
 
             if (!_isBot)
                 Input.MouseMode = Input.MouseModeEnum.Captured;
+
+            _spawnProtectionRemaining = TuningService.Instance.SpawnProtectionDuration;
         }
     }
 
@@ -148,32 +185,52 @@ public partial class Player : CharacterBody3D
                 : Input.MouseModeEnum.Captured;
         }
 
-        if (@event.IsActionPressed("attack_light"))
-        {
-            TryStab();
-        }
+        if (IsDead)
+            return; // no verbs while dead/in death cam
+
+        if (@event.IsActionPressed("attack_light")) RequestVerbLocal(Verb.Light);
+        if (@event.IsActionPressed("attack_heavy")) RequestVerbLocal(Verb.Heavy);
+        if (@event.IsActionPressed("parry")) RequestVerbLocal(Verb.Parry);
+        if (@event.IsActionPressed("dash")) RequestVerbLocal(Verb.Dash);
     }
 
     public override void _Process(double delta)
     {
-        if (_stabCooldownRemaining > 0f)
-            _stabCooldownRemaining = Mathf.Max(0f, _stabCooldownRemaining - (float)delta);
-
         if (_isRemoteView)
             InterpolateRemote();
 
         if (_isBot)
             RunBotAi(delta);
+
+        if (_isOwner && _deathCamRemaining > 0f)
+            RunDeathCam(delta);
+
+        UpdateSpawnProtectionVisual();
     }
 
     public override void _PhysicsProcess(double delta)
     {
+        // QueueFree() (disconnect handling, Main.OnPlayerDisconnected) defers actual removal to
+        // end-of-frame — a node can still get one more _PhysicsProcess tick after being queued
+        // for removal, and GlobalPosition/Rpc() on a node no longer in the tree logs a Godot
+        // engine error. Cheap, standard guard for that race.
+        if (!IsInsideTree())
+            return;
+
         if (_isServer)
+        {
+            TickCombatState((float)delta);
             RunServerPhysics(delta);
+        }
         else if (_isOwner && !_isOffline)
+        {
             RunPredictedPhysics(delta);
+        }
         else if (_isOffline)
+        {
+            TickCombatState((float)delta); // offline: this instance is also its own authority
             RunOfflinePhysics(delta);
+        }
         // Remote-view clients simulate nothing here — see InterpolateRemote() in _Process.
     }
 
@@ -187,18 +244,32 @@ public partial class Player : CharacterBody3D
 
         if (!IsOnFloor())
             velocity.Y -= (float)ProjectSettings.GetSetting("physics/3d/default_gravity") * (float)delta;
+        else if (TuningService.Instance.HopEnabled && WantsHop())
+            velocity.Y = TuningService.Instance.HopImpulse;
 
-        var direction = (Transform.Basis * new Vector3(inputDir.X, 0, inputDir.Y)).Normalized();
-
-        if (direction.LengthSquared() > 0.0001f)
+        if (_dashTimeRemaining > 0f)
         {
-            velocity.X = direction.X * MoveSpeed;
-            velocity.Z = direction.Z * MoveSpeed;
+            // Dash overrides normal horizontal input entirely for its duration — pure spacing
+            // burst, no i-frames (GDD §5.1: an i-framed dash + network latency = unexplainable
+            // deaths, banned by Pillar 2).
+            velocity.X = _dashVelocity.X;
+            velocity.Z = _dashVelocity.Z;
+            _dashTimeRemaining -= (float)delta;
         }
         else
         {
-            velocity.X = Mathf.MoveToward(velocity.X, 0f, MoveSpeed);
-            velocity.Z = Mathf.MoveToward(velocity.Z, 0f, MoveSpeed);
+            var direction = (Transform.Basis * new Vector3(inputDir.X, 0, inputDir.Y)).Normalized();
+
+            if (direction.LengthSquared() > 0.0001f)
+            {
+                velocity.X = direction.X * MoveSpeed;
+                velocity.Z = direction.Z * MoveSpeed;
+            }
+            else
+            {
+                velocity.X = Mathf.MoveToward(velocity.X, 0f, MoveSpeed);
+                velocity.Z = Mathf.MoveToward(velocity.Z, 0f, MoveSpeed);
+            }
         }
 
         Velocity = velocity;
@@ -217,8 +288,11 @@ public partial class Player : CharacterBody3D
         }
     }
 
+    private bool WantsHop() => _isBot ? false : Input.IsActionJustPressed("jump");
+
     private void RunOfflinePhysics(double delta)
     {
+        if (IsDead) return;
         var inputDir = Input.GetVector("move_left", "move_right", "move_forward", "move_back");
         SimulateStep(inputDir, delta);
     }
@@ -240,11 +314,17 @@ public partial class Player : CharacterBody3D
 
     private void RunServerPhysics(double delta)
     {
-        GlobalRotation = new Vector3(GlobalRotation.X, _serverPendingYaw, GlobalRotation.Z);
-        SimulateStep(_serverPendingInput, delta);
+        if (!IsDead)
+            GlobalRotation = new Vector3(GlobalRotation.X, _serverPendingYaw, GlobalRotation.Z);
+
+        if (!IsDead)
+            SimulateStep(_serverPendingInput, delta);
 
         var tick = Engine.GetPhysicsFrames();
         Rpc(nameof(ReceiveServerState), tick, GlobalPosition, GlobalRotation.Y);
+
+        if (_spawnProtectionRemaining > 0f)
+            _spawnProtectionRemaining = Mathf.Max(0f, _spawnProtectionRemaining - (float)delta);
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
@@ -281,7 +361,8 @@ public partial class Player : CharacterBody3D
     /// Tuning.ReconciliationSmoothTime rather than popping. This corrects the live body
     /// directly rather than doing a full input-replay resimulation — cheaper to write for a
     /// feasibility spike, at the cost of a visible correction on rough connections. Worth
-    /// revisiting with real playtest numbers before Phase 2 melee lands on top of it.
+    /// revisiting with real playtest numbers as Phase 2 combat puts more weight on precise
+    /// positioning (dash spacing, execute's behind-the-back check).
     /// </summary>
     private void ReconcileOwner(ulong tick, Vector3 serverPosition)
     {
@@ -333,78 +414,329 @@ public partial class Player : CharacterBody3D
     }
 
     // ------------------------------------------------------------------
-    // Network-spike stab verb — temporary, see class doc comment
+    // Combat — verb requests (client -> server), state machine (server only)
     // ------------------------------------------------------------------
 
-    private void TryStab()
+    private void RequestVerbLocal(Verb verb)
     {
-        if (_stabCooldownRemaining > 0f)
+        AttackRequestCount++;
+
+        if (_isOffline)
+        {
+            // No server round-trip offline — this instance IS its own authority.
+            TryStartVerb(verb);
             return;
+        }
 
-        _stabCooldownRemaining = TuningService.Instance.StabCooldown;
-        PredictedStabCount++;
-
-        Net.Instance.SendWithSimulation(() => RpcId(1, nameof(RequestStab)));
+        Net.Instance.SendWithSimulation(() => RpcId(1, nameof(RequestVerb), (int)verb));
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void RequestStab()
+    private void RequestVerb(int verbInt)
     {
         if (!_isServer)
             return;
+        if (Multiplayer.GetRemoteSenderId() != _peerId)
+            return; // reject a verb claiming to be from someone else's node
 
-        var attackerId = Multiplayer.GetRemoteSenderId();
-        if (attackerId != _peerId)
-            return; // reject a stab request claiming to be from someone else's node
+        TryStartVerb((Verb)verbInt);
+    }
 
-        var forward = -GlobalTransform.Basis.Z.Normalized();
-        var rewindSeconds = PingService.Instance.GetOneWayLatencySeconds(attackerId);
-        var victimId = CombatServer.Instance.TryResolveStab(attackerId, GlobalPosition, forward, rewindSeconds);
+    private void TryStartVerb(Verb verb)
+    {
+        if (_combatState == CombatState.Dead)
+            return;
 
-        if (victimId is { } vId)
+        // Any deliberate action cancels spawn protection immediately (GDD §5.7: "cancelled
+        // instantly on attacking"). Dash counts too — using the shimmer window to reposition
+        // for free would be the obvious abuse case a playtester would find first.
+        _spawnProtectionRemaining = 0f;
+
+        switch (verb)
         {
-            CombatServer.Instance.GetPlayerNode(vId)?.ServerApplyStabHit();
-            GD.Print($"[CombatServer] Peer {attackerId} stabbed peer {vId} (rewound {rewindSeconds * 1000f:F0}ms).");
+            case Verb.Light:
+                if (_combatState != CombatState.Idle) return;
+                _combatState = CombatState.LightWindup;
+                _stateTimer = TuningService.Instance.LightWindup;
+                break;
+
+            case Verb.Heavy:
+                if (_combatState != CombatState.Idle) return;
+                _combatState = CombatState.HeavyWindup;
+                _stateTimer = TuningService.Instance.HeavyWindup;
+                break;
+
+            case Verb.Parry:
+                if (_combatState != CombatState.Idle) return;
+                if (_parryCooldownRemaining > 0f) return;
+                _combatState = CombatState.Parrying;
+                _stateTimer = TuningService.Instance.ParryActiveWindow;
+                _parryCooldownRemaining = TuningService.Instance.ParryCooldown; // starts on attempt, hit or not
+                break;
+
+            case Verb.Dash:
+                if (_combatState != CombatState.Idle) return; // recovery locks out your own escape too — that's what makes whiffing costly
+                if (_dashCooldownRemaining > 0f) return;
+                _dashCooldownRemaining = TuningService.Instance.DashCooldown;
+                var forward = -GlobalTransform.Basis.Z.Normalized();
+                var tuning = TuningService.Instance;
+                _dashVelocity = forward * (tuning.DashDistance / Mathf.Max(0.01f, tuning.DashDuration));
+                _dashTimeRemaining = tuning.DashDuration;
+                break;
+        }
+    }
+
+    /// <summary>Server-only (and offline-solo): advances windup/recovery/parry/stagger/execute
+    /// timers and resolves the attack the instant a windup completes.</summary>
+    private void TickCombatState(float delta)
+    {
+        if (_parryCooldownRemaining > 0f)
+            _parryCooldownRemaining = Mathf.Max(0f, _parryCooldownRemaining - delta);
+        if (_dashCooldownRemaining > 0f)
+            _dashCooldownRemaining = Mathf.Max(0f, _dashCooldownRemaining - delta);
+
+        if (_combatState is CombatState.Idle or CombatState.Dead)
+            return;
+
+        _stateTimer -= delta;
+        if (_stateTimer > 0f)
+            return;
+
+        switch (_combatState)
+        {
+            case CombatState.LightWindup:
+                ResolveMeleeAttack(isHeavy: false);
+                _combatState = CombatState.Recovery;
+                _stateTimer = TuningService.Instance.LightRecovery;
+                break;
+
+            case CombatState.HeavyWindup:
+                ResolveMeleeAttack(isHeavy: true);
+                _combatState = CombatState.Recovery;
+                _stateTimer = TuningService.Instance.HeavyRecovery;
+                break;
+
+            case CombatState.Recovery:
+            case CombatState.Parrying:  // window closed with no parry — "failed parry leaves you open"
+            case CombatState.Staggered:
+            case CombatState.Executing:
+                _combatState = CombatState.Idle;
+                break;
+        }
+    }
+
+    private void ResolveMeleeAttack(bool isHeavy)
+    {
+        var tuning = TuningService.Instance;
+        var forward = -GlobalTransform.Basis.Z.Normalized();
+
+        if (isHeavy)
+        {
+            // The lunge itself: close the gap toward whatever's in front, stopping on collision
+            // so it can't be used to phase through walls/pillars.
+            MoveAndCollide(forward * tuning.HeavyLungeRange);
+        }
+
+        var range = isHeavy ? tuning.HeavyLungeRange : tuning.LightRange;
+        var radius = isHeavy ? tuning.HeavyHitRadius : tuning.LightHitRadius;
+        var rewindSeconds = PingService.Instance.GetOneWayLatencySeconds(_peerId);
+
+        var victimId = CombatServer.Instance.TryResolveMeleeHit(_peerId, GlobalPosition, forward, range, radius, rewindSeconds);
+        LastRewindMs = rewindSeconds * 1000f;
+
+        if (victimId is not { } vId)
+        {
+            RpcId(_peerId, nameof(ReceiveAttackResult), false, -1L);
+            return;
+        }
+
+        var victim = CombatServer.Instance.GetPlayerNode(vId);
+        if (victim is null)
+        {
+            RpcId(_peerId, nameof(ReceiveAttackResult), false, -1L);
+            return;
+        }
+
+        // Parry check: victim currently has an active parry window open.
+        if (victim._combatState == CombatState.Parrying)
+        {
+            victim._combatState = CombatState.Idle; // consumed — successful parry, no extra cooldown beyond the one already ticking
+            _combatState = CombatState.Staggered;
+            _stateTimer = tuning.ParryStaggerDuration;
+            GD.Print($"[Combat] {Main.GetPlayerName(vId)} parried {Main.GetPlayerName(_peerId)}'s {(isHeavy ? "heavy" : "light")}.");
+            RpcId(_peerId, nameof(ReceiveAttackResult), false, vId);
+            return;
+        }
+
+        if (victim.IsSpawnProtected)
+        {
+            RpcId(_peerId, nameof(ReceiveAttackResult), false, vId);
+            return; // shimmer means shimmer — no damage, no execute, nothing
+        }
+
+        // Execute check (heavy only): attacker is directly behind the victim's own facing.
+        var isExecute = false;
+        if (isHeavy)
+        {
+            var victimRewound = CombatServer.Instance.GetRewoundPosition(vId, rewindSeconds) ?? victim.GlobalPosition;
+            var victimForward = -victim.GlobalTransform.Basis.Z.Normalized();
+            var victimToAttacker = GlobalPosition - victimRewound;
+            if (victimToAttacker.LengthSquared() > 0.0001f)
+            {
+                // Angle between where the victim is FACING and where the attacker IS: near 180°
+                // means the attacker is behind the victim's back, not in front of their face.
+                var angle = Mathf.RadToDeg(victimForward.AngleTo(victimToAttacker.Normalized()));
+                isExecute = angle > (180f - tuning.ExecuteBehindAngleDegrees);
+            }
+        }
+
+        if (isExecute)
+        {
+            victim.ServerApplyDamage(victim._health, _peerId, "execute");
+            _combatState = CombatState.Executing;
+            _stateTimer = tuning.ExecuteAnimationLock; // "suicidal in a crowd" — you're locked and exposed right after
         }
         else
         {
-            GD.Print($"[CombatServer] Peer {attackerId} stab request: no target in range (rewound {rewindSeconds * 1000f:F0}ms).");
+            var damage = tuning.MaxHealth * (isHeavy ? tuning.HeavyDamagePercent : tuning.LightDamagePercent);
+            victim.ServerApplyDamage(damage, _peerId, isHeavy ? "heavy" : "light");
+            if (isHeavy && !victim.IsDead) // don't resurrect a kill into a stagger
+            {
+                victim._combatState = CombatState.Staggered;
+                victim._stateTimer = tuning.HeavyStaggerDuration;
+            }
         }
 
-        RpcId(attackerId, nameof(ReceiveStabResult), victimId is not null, victimId ?? -1, rewindSeconds * 1000f);
+        RpcId(_peerId, nameof(ReceiveAttackResult), true, vId);
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
-    private void ReceiveStabResult(bool confirmed, long victimId, float rewindMs)
+    private void ReceiveAttackResult(bool confirmed, long victimId)
     {
         if (!_isOwner)
             return;
 
-        LastRewindMs = rewindMs;
         if (confirmed)
-            ConfirmedStabCount++;
+            ConfirmedHitCount++;
     }
 
-    /// <summary>Server-only. Applies fixed stab damage; on death, resets health and teleports
-    /// to a random spawn marker so the spike-test loop keeps going without Phase 2's real
-    /// respawn/death-cam system.</summary>
-    public void ServerApplyStabHit()
+    /// <summary>Server-only. Applies damage; on lethal, kills, broadcasts the kill (killfeed +
+    /// death cam trigger), and schedules a respawn. GDD §5.2 target TTK: 2-3 connected hits.</summary>
+    public void ServerApplyDamage(float amount, long attackerId, string method)
     {
-        if (!_isServer)
+        if (!_isServer || IsDead || !IsInsideTree())
             return;
 
-        _health -= TuningService.Instance.StabDamage;
+        _health -= amount;
         if (_health > 0f)
             return;
 
+        _health = 0f;
+        _combatState = CombatState.Dead;
+        Velocity = Vector3.Zero;
+
+        GD.Print($"[Combat] {Main.GetPlayerName(attackerId)} killed {Main.GetPlayerName(_peerId)} ({method}).");
+
+        // Broadcast from the VICTIM node (this) to everyone — killfeed + this player's own
+        // death cam trigger on their own client (see BroadcastKill).
+        Rpc(nameof(BroadcastKill), attackerId, _peerId, method, GlobalPosition);
+
+        GetTree().CreateTimer(TuningService.Instance.RespawnTime).Timeout += ServerRespawn;
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void BroadcastKill(long killerId, long victimId, string method, Vector3 deathPosition)
+    {
+        // CallLocal is on so this also fires for the server's own call (needed for offline mode,
+        // where "the server" and "the only client" are the same process). GetRemoteSenderId()
+        // reads 0 for that local invocation, so only gate remote calls, and only the real server
+        // (peer 1) is ever allowed to have actually sent one in the first place.
+        if (!_isServer && Multiplayer.GetRemoteSenderId() != 1)
+            return;
+
+        Events.Instance.EmitSignal(Events.SignalName.PlayerKilled, killerId, victimId, method);
+        SpawnDeathEffect(deathPosition);
+
+        if (_isOwner && victimId == _peerId)
+        {
+            _deathCamRemaining = TuningService.Instance.DeathCamDuration;
+            var killer = CombatServer.Instance.GetPlayerNode(killerId);
+            _deathCamLookAt = killer is not null ? killer.GlobalPosition : deathPosition;
+        }
+    }
+
+    private void ServerRespawn()
+    {
+        if (!_isServer || !IsDead)
+            return;
+
         _health = TuningService.Instance.MaxHealth;
+        _combatState = CombatState.Idle;
+        Velocity = Vector3.Zero;
+
         var spawn = Main.PickRandomSpawn();
         if (spawn is not null)
             GlobalPosition = spawn.GlobalPosition;
+
+        _spawnProtectionRemaining = TuningService.Instance.SpawnProtectionDuration;
+    }
+
+    /// <summary>Cosmetic-only "ragdoll": a primitive tumbling capsule dropped where the player
+    /// died, no networking, each client spawns its own on receiving BroadcastKill. Grey-box
+    /// stand-in per plan/phase-2-greybox-combat.md — a real skinned ragdoll waits for Phase 5
+    /// character art. Self-frees after a few seconds.</summary>
+    private static void SpawnDeathEffect(Vector3 position)
+    {
+        var tree = (SceneTree)Engine.GetMainLoop();
+        var root = tree.CurrentScene;
+        if (root is null) return;
+
+        // Set local Position, not GlobalPosition: the node has no parent yet, and
+        // GlobalPosition's setter reads the current global transform to compute a relative
+        // offset — on a node not yet in the tree that read fails (logs a harmless-but-noisy
+        // engine error and falls back to identity). Local == global with no parent, so this is
+        // equivalent and avoids the tree dependency entirely.
+        var body = new RigidBody3D { Position = position + Vector3.Up * 0.3f };
+        var shape = new CollisionShape3D { Shape = new CapsuleShape3D { Radius = 0.35f, Height = 1.6f } };
+        var mesh = new MeshInstance3D { Mesh = new CapsuleMesh { Radius = 0.35f, Height = 1.6f } };
+        body.AddChild(shape);
+        body.AddChild(mesh);
+        root.AddChild(body);
+
+        var rng = new RandomNumberGenerator();
+        body.ApplyImpulse(new Vector3(rng.RandfRange(-2f, 2f), rng.RandfRange(1f, 3f), rng.RandfRange(-2f, 2f)));
+        body.ApplyTorqueImpulse(new Vector3(rng.RandfRange(-3f, 3f), rng.RandfRange(-3f, 3f), rng.RandfRange(-3f, 3f)));
+
+        tree.CreateTimer(3.0).Timeout += () => { if (IsInstanceValid(body)) body.QueueFree(); };
+    }
+
+    private void RunDeathCam(double delta)
+    {
+        _deathCamRemaining = Mathf.Max(0f, _deathCamRemaining - (float)delta);
+
+        var toKiller = _deathCamLookAt - GlobalPosition;
+        toKiller.Y = 0;
+        if (toKiller.LengthSquared() > 0.01f)
+        {
+            var lookBasis = Basis.LookingAt(toKiller.Normalized(), Vector3.Up);
+            GlobalRotation = new Vector3(GlobalRotation.X, lookBasis.GetEuler().Y, GlobalRotation.Z);
+        }
+    }
+
+    private void UpdateSpawnProtectionVisual()
+    {
+        if (_meshMaterial is null)
+            return;
+
+        // Grey-box stand-in for the spec'd shimmer (GDD §5.7) — a real shader effect is Phase 5
+        // art-pass territory; this just needs to be visually distinct without assets.
+        _meshMaterial.EmissionEnabled = _spawnProtectionRemaining > 0f;
+        if (_spawnProtectionRemaining > 0f)
+            _meshMaterial.Emission = new Color(1f, 1f, 1f);
     }
 
     // ------------------------------------------------------------------
-    // Bot AI — simple wander + periodic stab, see core/Net.cs --bot
+    // Bot AI — wander + occasional verbs, see core/Net.cs --bot
     // ------------------------------------------------------------------
 
     private void PickNewBotTarget()
@@ -417,6 +749,12 @@ public partial class Player : CharacterBody3D
 
     private void RunBotAi(double delta)
     {
+        if (IsDead)
+        {
+            _botMoveInput = Vector2.Zero;
+            return;
+        }
+
         _botRetargetIn -= delta;
         if (_botRetargetIn <= 0 || GlobalPosition.DistanceTo(_botTarget) < 1.0f)
             PickNewBotTarget();
@@ -436,11 +774,21 @@ public partial class Player : CharacterBody3D
             _botMoveInput = Vector2.Zero;
         }
 
-        _botStabIn -= delta;
-        if (_botStabIn <= 0)
+        _botVerbIn -= delta;
+        if (_botVerbIn <= 0)
         {
-            TryStab();
-            _botStabIn = GD.RandRange(2.0, 5.0);
+            // Weighted toward light (cheap, spammable) with occasional heavy/parry/dash — rough
+            // stand-in for "a bot that presses buttons", not remotely competent play.
+            var roll = GD.Randf();
+            var verb = roll switch
+            {
+                < 0.55f => Verb.Light,
+                < 0.80f => Verb.Heavy,
+                < 0.92f => Verb.Dash,
+                _ => Verb.Parry,
+            };
+            RequestVerbLocal(verb);
+            _botVerbIn = GD.RandRange(1.0, 3.0);
         }
     }
 

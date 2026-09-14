@@ -13,12 +13,17 @@ public partial class Tuning : Resource
     [ExportGroup("Melee — Light")]
     [Export] public float LightWindup = 0.12f;
     [Export] public float LightDamagePercent = 0.35f;
+    [Export] public float LightRange = 2.0f;
+    [Export] public float LightHitRadius = 0.9f;
+    [Export] public float LightRecovery = 0.15f;
 
     [ExportGroup("Melee — Heavy Lunge")]
     [Export] public float HeavyWindup = 0.40f;
     [Export] public float HeavyDamagePercent = 0.65f;
     [Export] public float HeavyLungeRange = 3.0f;
+    [Export] public float HeavyHitRadius = 1.1f;
     [Export] public float HeavyRecovery = 0.6f;
+    [Export] public float HeavyStaggerDuration = 0.4f;
 
     [ExportGroup("Melee — Parry")]
     [Export] public float ParryActiveWindow = 0.15f;
@@ -77,9 +82,7 @@ public partial class Tuning : Resource
     [ExportGroup("Safety")]
     [Export] public float VoidCatchY = -20.0f; // fall below this world Y anywhere -> reset to a spawn point
 
-    [ExportGroup("Network Spike — temporary stab verb (replaced by real melee in Phase 2)")]
-    [Export] public float StabRange = 2.5f;
-    [Export] public float StabHitRadius = 1.0f;
-    [Export] public float StabDamage = 25.0f;
-    [Export] public float StabCooldown = 0.5f;
+    [ExportGroup("Movement — jump/hop (GDD §5.1, TBD via grey-box A/B)")]
+    [Export] public bool HopEnabled = false; // toggle here for the A/B test; playtest decides, not this default
+    [Export] public float HopImpulse = 4.0f;
 }

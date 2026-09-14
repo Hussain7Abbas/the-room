@@ -24,11 +24,13 @@
 - One environmental hazard (tell-first, never unavoidable).
 
 ## Tasks
+- [ ] **Carried over from Phase 2** (see `plan/phase-2-greybox-combat.md` "Testing"/tasks): score target + timer, simple results screen, rematch vote. Deferred there specifically because it overlaps with this phase's own "does a match have an ending" — building it once, here, alongside Last Call.
+- [ ] **Also carried over from Phase 2**: Duel Pit (6–10) / Chaos (12–20) config selection — needs a lobby/config-select UI, which didn't exist yet when Phase 2 was built (one static room, bots only).
 - [ ] Bounty system + announcer/callout UI.
 - [ ] Golden Knife pickup, outline shader, scoring multiplier.
 - [ ] Last Call phase controller + shutters + lighting.
 - [ ] Map sections gated by player count; hazard.
-- [ ] Telemetry: match length, lead changes, bounty claims, knife pickups by player rank.
+- [ ] Telemetry: match length, lead changes, bounty claims, knife pickups by player rank. (Phase 2 also deferred a structured death-cause log to here/whenever real human playtests start producing data worth logging.)
 
 ## Playtest questions
 - Median match length < 10 min?
