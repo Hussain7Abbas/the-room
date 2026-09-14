@@ -47,6 +47,17 @@ public partial class CombatServer : Node
 
     public Player? GetPlayerNode(long peerId) => _players.TryGetValue(peerId, out var node) ? node as Player : null;
 
+    /// <summary>All currently-registered players (server only) — used by area-effect abilities
+    /// (e.g. abilities/FirePatchZone.cs) that need to check everyone in a radius, not one target.</summary>
+    public IEnumerable<Player> AllPlayers()
+    {
+        foreach (var node in _players.Values)
+        {
+            if (IsInstanceValid(node) && node is Player p)
+                yield return p;
+        }
+    }
+
     public override void _PhysicsProcess(double delta)
     {
         if (!Net.Instance.IsServer)

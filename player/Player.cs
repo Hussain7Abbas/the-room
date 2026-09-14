@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using Godot;
+using TheRoom.Abilities;
+using TheRoom.Config;
 using TheRoom.Core;
 
 namespace TheRoom.Entities;
@@ -48,6 +50,7 @@ public partial class Player : CharacterBody3D
     private bool _isRemoteView; // another client watching a peer that is neither them nor the server
     private bool _isBot;
     private long _peerId;
+    public long PeerId => _peerId;
 
     // --- client-side prediction (owning client, networked only) ---
     private readonly List<PredictedState> _predictedHistory = new();
@@ -99,6 +102,7 @@ public partial class Player : CharacterBody3D
     private Vector3 _botTarget;
     private double _botRetargetIn;
     private double _botVerbIn;
+    private double _botAbilityIn;
 
     // --- debug overlay stats (owning client only, see core/DebugOverlay.cs) ---
     public int AttackRequestCount { get; private set; }
@@ -111,6 +115,18 @@ public partial class Player : CharacterBody3D
     // --- death cam (owning client only) ---
     private float _deathCamRemaining;
     private Vector3 _deathCamLookAt;
+
+    // --- character/ability (Phase 3, CHARACTER-SPEC.md) ---
+    private CharacterDef? _characterDef;
+    private Ability? _ability;
+    private string _displayName = "";
+    public string DisplayName => _displayName;
+    public CharacterDef? Character => _characterDef;
+
+    // Ability shared-kit state (abilities/Ability.cs ApplySlow/Reveal helpers write these).
+    private float _slowMultiplier = 1f;
+    private float _slowTimeRemaining;
+    private float _revealRemaining;
 
     public override void _Ready()
     {
@@ -150,6 +166,23 @@ public partial class Player : CharacterBody3D
                 Input.MouseMode = Input.MouseModeEnum.Captured;
 
             _spawnProtectionRemaining = TuningService.Instance.SpawnProtectionDuration;
+        }
+
+        // Identity handshake: the owning client tells the server its chosen name + character;
+        // the server validates and broadcasts the result to everyone (this node's Name label,
+        // Main's peer-id->name registry for killfeed/scoreboard, and the equipped ability all
+        // depend on every peer — not just the server — actually receiving this). Before this,
+        // SetDisplayName() was only ever called locally on the server's own copy, which
+        // MultiplayerSpawner never replicates — a real bug: every client's name label and
+        // killfeed/scoreboard entries silently stayed blank/placeholder for anyone but the
+        // server. See plan/phase-3-abilities.md.
+        if (_isOffline)
+        {
+            ApplyIdentity(Net.Instance.LocalPlayerName, Net.Instance.ChosenCharacterId);
+        }
+        else if (_isOwner)
+        {
+            RpcId(1, nameof(AnnounceIdentity), Net.Instance.LocalPlayerName, Net.Instance.ChosenCharacterId ?? "");
         }
     }
 
@@ -192,6 +225,7 @@ public partial class Player : CharacterBody3D
         if (@event.IsActionPressed("attack_heavy")) RequestVerbLocal(Verb.Heavy);
         if (@event.IsActionPressed("parry")) RequestVerbLocal(Verb.Parry);
         if (@event.IsActionPressed("dash")) RequestVerbLocal(Verb.Dash);
+        if (@event.IsActionPressed("ability")) RequestAbilityLocal();
     }
 
     public override void _Process(double delta)
@@ -205,7 +239,7 @@ public partial class Player : CharacterBody3D
         if (_isOwner && _deathCamRemaining > 0f)
             RunDeathCam(delta);
 
-        UpdateSpawnProtectionVisual();
+        UpdateVisualEffects(delta);
     }
 
     public override void _PhysicsProcess(double delta)
@@ -220,6 +254,7 @@ public partial class Player : CharacterBody3D
         if (_isServer)
         {
             TickCombatState((float)delta);
+            _ability?.Tick((float)delta);
             RunServerPhysics(delta);
         }
         else if (_isOwner && !_isOffline)
@@ -229,6 +264,7 @@ public partial class Player : CharacterBody3D
         else if (_isOffline)
         {
             TickCombatState((float)delta); // offline: this instance is also its own authority
+            _ability?.Tick((float)delta);
             RunOfflinePhysics(delta);
         }
         // Remote-view clients simulate nothing here — see InterpolateRemote() in _Process.
@@ -259,16 +295,17 @@ public partial class Player : CharacterBody3D
         else
         {
             var direction = (Transform.Basis * new Vector3(inputDir.X, 0, inputDir.Y)).Normalized();
+            var effectiveSpeed = MoveSpeed * _slowMultiplier; // ability shared-kit: Ability.ApplySlow
 
             if (direction.LengthSquared() > 0.0001f)
             {
-                velocity.X = direction.X * MoveSpeed;
-                velocity.Z = direction.Z * MoveSpeed;
+                velocity.X = direction.X * effectiveSpeed;
+                velocity.Z = direction.Z * effectiveSpeed;
             }
             else
             {
-                velocity.X = Mathf.MoveToward(velocity.X, 0f, MoveSpeed);
-                velocity.Z = Mathf.MoveToward(velocity.Z, 0f, MoveSpeed);
+                velocity.X = Mathf.MoveToward(velocity.X, 0f, effectiveSpeed);
+                velocity.Z = Mathf.MoveToward(velocity.Z, 0f, effectiveSpeed);
             }
         }
 
@@ -495,6 +532,15 @@ public partial class Player : CharacterBody3D
         if (_dashCooldownRemaining > 0f)
             _dashCooldownRemaining = Mathf.Max(0f, _dashCooldownRemaining - delta);
 
+        if (_slowTimeRemaining > 0f)
+        {
+            _slowTimeRemaining = Mathf.Max(0f, _slowTimeRemaining - delta);
+            if (_slowTimeRemaining <= 0f)
+                _slowMultiplier = 1f;
+        }
+        if (_revealRemaining > 0f)
+            _revealRemaining = Mathf.Max(0f, _revealRemaining - delta);
+
         if (_combatState is CombatState.Idle or CombatState.Dead)
             return;
 
@@ -681,6 +727,176 @@ public partial class Player : CharacterBody3D
         _spawnProtectionRemaining = TuningService.Instance.SpawnProtectionDuration;
     }
 
+    // ------------------------------------------------------------------
+    // Identity (name + character) — see the _Ready() handshake comment for why this exists
+    // ------------------------------------------------------------------
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void AnnounceIdentity(string requestedName, string? characterId)
+    {
+        if (!_isServer)
+            return;
+        if (Multiplayer.GetRemoteSenderId() != _peerId)
+            return; // reject an identity claim for someone else's node
+
+        var safeName = string.IsNullOrWhiteSpace(requestedName) ? $"Player {_peerId}" : requestedName;
+        Rpc(nameof(ReceiveIdentity), safeName, characterId ?? "");
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void ReceiveIdentity(string name, string? characterId)
+    {
+        if (!_isServer && Multiplayer.GetRemoteSenderId() != 1)
+            return;
+
+        ApplyIdentity(name, characterId);
+    }
+
+    private void ApplyIdentity(string name, string? characterId)
+    {
+        _displayName = name;
+        SetDisplayName(name);
+        Main.RegisterPlayerName(_peerId, name);
+        EquipCharacter(characterId);
+    }
+
+    private void EquipCharacter(string? characterId)
+    {
+        _characterDef = CharacterRegistry.GetOrDefault(characterId);
+        _ability = CreateAbility(_characterDef.Ability, this);
+
+        if (_meshMaterial is not null)
+            _meshMaterial.AlbedoColor = _characterDef.SilhouetteColor;
+    }
+
+    private static Ability? CreateAbility(AbilityDef? def, Player caster) => def?.Id switch
+    {
+        "blink" => new BlinkAbility(def, caster),
+        "firepatch" => new FirePatchAbility(def, caster),
+        _ => null,
+    };
+
+    // ------------------------------------------------------------------
+    // Ability activation (client -> server), separate timer from the melee state machine —
+    // see abilities/Ability.cs's class doc for why they're decoupled
+    // ------------------------------------------------------------------
+
+    private void RequestAbilityLocal()
+    {
+        if (_combatState != CombatState.Idle)
+            return;
+
+        _spawnProtectionRemaining = 0f; // cancelled instantly on any deliberate action, same as the melee verbs
+
+        if (_isOffline)
+        {
+            _ability?.TryActivate();
+            return;
+        }
+
+        Net.Instance.SendWithSimulation(() => RpcId(1, nameof(RequestAbility)));
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void RequestAbility()
+    {
+        if (!_isServer)
+            return;
+        if (Multiplayer.GetRemoteSenderId() != _peerId)
+            return;
+        if (_combatState != CombatState.Idle)
+            return;
+
+        _ability?.TryActivate();
+    }
+
+    /// <summary>Called by Ability.TryActivate() the instant a windup starts — broadcasts a
+    /// visible tell on the caster (grey-box stand-in: an emissive flash, see
+    /// UpdateVisualEffects) to every client, since only the server ever runs ability logic and
+    /// nothing here replicates automatically.</summary>
+    public void BroadcastAbilityTell(string abilityId, float tellSeconds)
+    {
+        if (!_isServer)
+            return;
+        Rpc(nameof(ReceiveAbilityTell), tellSeconds);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
+    private void ReceiveAbilityTell(float tellSeconds)
+    {
+        if (!_isServer && Multiplayer.GetRemoteSenderId() != 1)
+            return;
+        _abilityTellRemaining = tellSeconds;
+    }
+    private float _abilityTellRemaining;
+
+    // ------------------------------------------------------------------
+    // Ability shared-kit support (CHARACTER-SPEC.md Part 1: abilities build on these, they
+    // don't invent their own systems) — called from abilities/Ability.cs's protected helpers
+    // ------------------------------------------------------------------
+
+    public void ServerTeleport(Vector3 position)
+    {
+        if (!_isServer)
+            return;
+        GlobalPosition = position;
+    }
+
+    public void ServerApplyDisplacement(Vector3 impulse)
+    {
+        if (!_isServer)
+            return;
+        Velocity += impulse;
+    }
+
+    /// <summary>Duration is expected pre-clamped by Ability.ApplySlow (≤ Tuning.MaxControlEffectDuration).
+    /// Multiple overlapping slows take the strongest (lowest) multiplier rather than stacking multiplicatively.</summary>
+    public void ServerApplySlow(float speedMultiplier, float durationSeconds)
+    {
+        if (!_isServer)
+            return;
+        _slowMultiplier = Mathf.Min(_slowMultiplier, speedMultiplier);
+        _slowTimeRemaining = Mathf.Max(_slowTimeRemaining, durationSeconds);
+    }
+
+    public void ServerApplyReveal(float durationSeconds)
+    {
+        if (!_isServer)
+            return;
+        Rpc(nameof(BroadcastReveal), durationSeconds);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
+    private void BroadcastReveal(float durationSeconds)
+    {
+        if (!_isServer && Multiplayer.GetRemoteSenderId() != 1)
+            return;
+        _revealRemaining = durationSeconds;
+    }
+
+    /// <summary>Zone Denial / Trap shared kit (Ability.SpawnDamageZone): broadcasts from the
+    /// caster so every client spawns its own AbilityZone — visible everywhere, damage only ever
+    /// real on the server copy (see AbilityZone's own IsServer guard).</summary>
+    public void ServerSpawnDamageZone(Vector3 position, float radius, float durationSeconds, float damagePerSecond, string method, Color color)
+    {
+        if (!_isServer)
+            return;
+        Rpc(nameof(BroadcastAbilityZone), position, radius, durationSeconds, damagePerSecond, method, color);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void BroadcastAbilityZone(Vector3 position, float radius, float durationSeconds, float damagePerSecond, string method, Color color)
+    {
+        if (!_isServer && Multiplayer.GetRemoteSenderId() != 1)
+            return;
+
+        var attackerId = _peerId; // this node IS the caster
+        AbilityZone.Spawn(position, radius, durationSeconds, color, oneShot: false, (victim, delta) =>
+        {
+            victim.ServerApplyDamage(damagePerSecond * delta, attackerId, method);
+        });
+    }
+
     /// <summary>Cosmetic-only "ragdoll": a primitive tumbling capsule dropped where the player
     /// died, no networking, each client spawns its own on receiving BroadcastKill. Grey-box
     /// stand-in per plan/phase-2-greybox-combat.md — a real skinned ragdoll waits for Phase 5
@@ -723,16 +939,28 @@ public partial class Player : CharacterBody3D
         }
     }
 
-    private void UpdateSpawnProtectionVisual()
+    /// <summary>Grey-box stand-in for every "needs a visible tell/state" requirement that
+    /// doesn't have a real VFX asset yet (spawn protection shimmer GDD §5.7; an ability's tell,
+    /// CHARACTER-SPEC.md Part 1; being Revealed by an Information-slot ability) — an emissive
+    /// color flash on the same mesh material. Real shader work is Phase 5 art-pass territory.
+    /// Priority when more than one is active at once: ability tell, then reveal, then spawn
+    /// protection — arbitrary but consistent, and rare to actually overlap.</summary>
+    private void UpdateVisualEffects(double delta)
     {
+        if (_abilityTellRemaining > 0f)
+            _abilityTellRemaining = Mathf.Max(0f, _abilityTellRemaining - (float)delta);
+
         if (_meshMaterial is null)
             return;
 
-        // Grey-box stand-in for the spec'd shimmer (GDD §5.7) — a real shader effect is Phase 5
-        // art-pass territory; this just needs to be visually distinct without assets.
-        _meshMaterial.EmissionEnabled = _spawnProtectionRemaining > 0f;
-        if (_spawnProtectionRemaining > 0f)
-            _meshMaterial.Emission = new Color(1f, 1f, 1f);
+        Color? color = _abilityTellRemaining > 0f ? new Color(0.2f, 0.9f, 1f) // cyan
+            : _revealRemaining > 0f ? new Color(1f, 0.15f, 0.15f) // red
+            : _spawnProtectionRemaining > 0f ? new Color(1f, 1f, 1f) // white
+            : null;
+
+        _meshMaterial.EmissionEnabled = color is not null;
+        if (color is { } c)
+            _meshMaterial.Emission = c;
     }
 
     // ------------------------------------------------------------------
@@ -789,6 +1017,13 @@ public partial class Player : CharacterBody3D
             };
             RequestVerbLocal(verb);
             _botVerbIn = GD.RandRange(1.0, 3.0);
+        }
+
+        _botAbilityIn -= delta;
+        if (_botAbilityIn <= 0)
+        {
+            RequestAbilityLocal();
+            _botAbilityIn = GD.RandRange(4.0, 10.0);
         }
     }
 

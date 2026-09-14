@@ -85,4 +85,21 @@ public partial class Tuning : Resource
     [ExportGroup("Movement — jump/hop (GDD §5.1, TBD via grey-box A/B)")]
     [Export] public bool HopEnabled = false; // toggle here for the A/B test; playtest decides, not this default
     [Export] public float HopImpulse = 4.0f;
+
+    /// <summary>
+    /// Per-ability numbers, keyed "&lt;abilityId&gt;.&lt;paramName&gt;" (e.g. "blink.range",
+    /// "firepatch.damage_per_tick"). CHARACTER-SPEC.md Part 4: ability owners control an
+    /// ability's *shape* in code (abilities/&lt;id&gt;/*.cs); every number it uses lives here
+    /// instead, so the single tuning-file owner can rebalance without touching an owner's code.
+    /// AbilityDef.ValidateHardRules() (abilities/AbilityValidator.cs) checks the *Cooldown and
+    /// *TellSeconds keys specifically against AbilityCooldownMin/Max and MinAbilityTellTime.
+    /// </summary>
+    [ExportGroup("Abilities — per-ability numbers (CHARACTER-SPEC.md Part 4)")]
+    [Export] public Godot.Collections.Dictionary<string, float> AbilityNumbers = new();
+
+    public float GetAbilityNumber(string abilityId, string param, float fallback = 0f)
+    {
+        var key = $"{abilityId}.{param}";
+        return AbilityNumbers.TryGetValue(key, out var value) ? value : fallback;
+    }
 }

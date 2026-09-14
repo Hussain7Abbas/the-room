@@ -26,6 +26,7 @@ public partial class Main : Node3D
     private static readonly Dictionary<long, string> _playerNames = new();
     public static IReadOnlyDictionary<long, string> PlayerNames => _playerNames;
     public static string GetPlayerName(long peerId) => _playerNames.TryGetValue(peerId, out var n) ? n : $"Player {peerId}";
+    public static void RegisterPlayerName(long peerId, string name) => _playerNames[peerId] = name;
 
     public override void _Ready()
     {

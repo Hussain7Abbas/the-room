@@ -52,3 +52,14 @@ ReconciliationSmoothTime = 0.12
 VoidCatchY = -20.0
 HopEnabled = false
 HopImpulse = 4.0
+AbilityNumbers = {
+"blink.tell_seconds": 0.3,
+"blink.cooldown": 14.0,
+"blink.range": 6.0,
+"firepatch.tell_seconds": 0.3,
+"firepatch.cooldown": 18.0,
+"firepatch.range": 8.0,
+"firepatch.radius": 2.5,
+"firepatch.duration": 4.0,
+"firepatch.damage_per_second": 20.0
+}

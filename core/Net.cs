@@ -15,6 +15,9 @@ namespace TheRoom.Core;
 ///                        real input (see player/Player.cs) — for reaching 20 players with few humans
 ///   --sim-latency=&lt;ms&gt;   artificially delay this client's outgoing input/stab RPCs (local testing only)
 ///   --sim-loss=&lt;0..1&gt;    artificially drop this fraction of this client's outgoing RPCs
+///   --character=&lt;id&gt;     which character to play (see abilities/CharacterRegistry.cs); no
+///                        character-select UI yet (Phase 3 deferred it), defaults to whichever
+///                        character is first in the registry if omitted or unknown
 ///
 /// With none of these flags, the game runs OFFLINE (no MultiplayerPeer at all) so a single
 /// person can open the editor and just look at the room/player — useful for quick iteration.
@@ -31,6 +34,7 @@ public partial class Net : Node
     public bool IsOffline { get; private set; } = true;
     public bool IsBot { get; private set; }
     public string LocalPlayerName { get; private set; } = "Player";
+    public string? ChosenCharacterId { get; private set; }
 
     /// <summary>Artificial one-way delay (seconds) applied to this client's own outgoing RPCs. 0 = off.</summary>
     public float SimLatencySeconds { get; private set; }
@@ -45,6 +49,10 @@ public partial class Net : Node
 
         // Fixed tick rate for deterministic server simulation / hit-rewind (GDD §4, Tuning.ServerTickRateHz).
         Engine.PhysicsTicksPerSecond = TuningService.Instance.ServerTickRateHz;
+
+        // Grammar check every boot (CHARACTER-SPEC.md Part 3 review gate, mechanical half) —
+        // a broken ability should fail loudly at startup, not get discovered mid-playtest.
+        AbilityValidator.RunAndPrint();
 
         ParseArgsAndStart();
     }
@@ -71,6 +79,9 @@ public partial class Net : Node
             : $"Player{GD.Randi() % 1000}";
 
         IsBot = args.ContainsKey("bot");
+        ChosenCharacterId = args.TryGetValue("character", out var characterId) && !string.IsNullOrWhiteSpace(characterId)
+            ? characterId
+            : null;
 
         if (args.TryGetValue("sim-latency", out var latencyStr) && float.TryParse(latencyStr, out var latencyMs))
             SimLatencySeconds = Mathf.Max(0f, latencyMs) / 1000f;

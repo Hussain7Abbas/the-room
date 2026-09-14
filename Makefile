@@ -22,9 +22,11 @@ export PATH := $(DOTNET_DIR):$(PATH)
 GODOT := /Applications/Godot_mono.app/Contents/MacOS/Godot
 
 SLN     := The Room.sln
-PORT    ?= 60010
-HOST    ?= 127.0.0.1
-N       ?= 2
+PORT      ?= 60010
+HOST      ?= 127.0.0.1
+N         ?= 2
+CHARACTER ?=
+CHAR_FLAG := $(if $(CHARACTER),--character=$(CHARACTER),)
 
 # VPS deploy target (see plan/phase-1-network-spike.md). SSH host is an alias from ~/.ssh/config;
 # app runs isolated under its own system user/service, never as part of DEPLOY_HOST's other apps.
@@ -55,9 +57,9 @@ help:
 	@echo "$(BLUE)App$(RESET)"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "build" "Build the C# project ($(YELLOW)dotnet build$(RESET))"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "run-server" "Run a dedicated headless server ($(YELLOW)godot --headless --server$(RESET)). PORT=$(PORT)"
-	@printf "  $(GREEN)%-14s$(RESET) %s\n" "run-client" "Run one windowed client and connect ($(YELLOW)godot --connect$(RESET)). HOST=$(HOST) PORT=$(PORT)"
-	@printf "  $(GREEN)%-14s$(RESET) %s\n" "run-local" "Spawn 1 local server + N windowed clients. N=$(N) PORT=$(PORT)"
-	@printf "  $(GREEN)%-14s$(RESET) %s\n" "run-bots" "Connect N headless wander/stab bots to a server (see run-server). N=$(N) HOST=$(HOST) PORT=$(PORT)"
+	@printf "  $(GREEN)%-14s$(RESET) %s\n" "run-client" "Run one windowed client and connect ($(YELLOW)godot --connect$(RESET)). HOST=$(HOST) PORT=$(PORT) CHARACTER=$(CHARACTER)"
+	@printf "  $(GREEN)%-14s$(RESET) %s\n" "run-local" "Spawn 1 local server + N windowed clients. N=$(N) PORT=$(PORT) CHARACTER=$(CHARACTER)"
+	@printf "  $(GREEN)%-14s$(RESET) %s\n" "run-bots" "Connect N headless wander/stab/ability bots to a server (see run-server). N=$(N) HOST=$(HOST) PORT=$(PORT) CHARACTER=$(CHARACTER)"
 	@echo ""
 	@echo "$(BLUE)Quality$(RESET)"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "clean" "Remove build/editor caches ($(YELLOW).godot/mono, bin, obj$(RESET))"
@@ -97,7 +99,7 @@ run-server: build
 	@cd "$(ROOT)" && "$(GODOT)" --headless --path . -- --server --port=$(PORT)
 
 run-client: build
-	@cd "$(ROOT)" && "$(GODOT)" --path . -- --connect=$(HOST) --port=$(PORT)
+	@cd "$(ROOT)" && "$(GODOT)" --path . -- --connect=$(HOST) --port=$(PORT) $(CHAR_FLAG)
 
 run-local: build
 	@cd "$(ROOT)" && \
@@ -108,7 +110,7 @@ run-local: build
 	sleep 2; \
 	for i in $$(seq 1 $(N)); do \
 		echo "$(GREEN)Starting client $$i...$(RESET)"; \
-		"$(GODOT)" --path . -- --connect=127.0.0.1 --port=$(PORT) --name=Player$$i & \
+		"$(GODOT)" --path . -- --connect=127.0.0.1 --port=$(PORT) --name=Player$$i $(CHAR_FLAG) & \
 		sleep 0.5; \
 	done; \
 	wait
@@ -117,7 +119,7 @@ run-bots: build
 	@cd "$(ROOT)" && \
 	for i in $$(seq 1 $(N)); do \
 		echo "$(GREEN)Starting bot $$i...$(RESET)"; \
-		"$(GODOT)" --headless --path . -- --connect=$(HOST) --port=$(PORT) --name=Bot$$i --bot & \
+		"$(GODOT)" --headless --path . -- --connect=$(HOST) --port=$(PORT) --name=Bot$$i --bot $(CHAR_FLAG) & \
 		sleep 0.3; \
 	done; \
 	wait
