@@ -42,7 +42,8 @@ Both were real, silent correctness bugs — not caught by compiling or by Phase 
 **Provisional go.** The architecture works over a real internet hop at small scale with no correctness issues (zero errors across all local + WAN runs) and the numbers so far (90ms RTT, <52ms rewind) sit well inside budget. Not a full go/no-go yet — that needs an actual 8-then-20-person team playtest, which only the team can do. Chosen tick rate (30 Hz) and interpolation delay (100ms) are recorded in `tuning/tuning.tres` as defaults, tunable without a rebuild.
 
 ## Deployed server
-- Host: `kios-chat` (SSH alias), port `60010/udp`. Public IP is not recorded here (this repo is pushed to public GitHub) — get it from whoever manages the box, or `ssh kios-chat` and check locally.
-- Isolated as user `theroom` under `/opt/the-room/app`, systemd unit `the-room-server.service`.
+- **Connect:** `room-udp.iscoded.com:60010` — a **DNS-only** (grey-cloud) Cloudflare record pointing straight at the VPS. This has to stay grey-cloud: Cloudflare's orange-cloud proxy only carries HTTP(S), not raw UDP/ENet, so a proxied record would silently break every connection. Client example: `godot --path . -- --connect=room-udp.iscoded.com --port=60010`.
+- SSH host: `kios-chat` (SSH alias). Isolated as user `theroom` under `/opt/the-room/app`, systemd unit `the-room-server.service`.
 - Redeploy: `make deploy-server`. Check on it: `make deploy-status`, `make deploy-logs`.
-- Known gap: relies on the box's cloud-provider network allowing inbound UDP `60010` — it evidently does (the WAN test connected), but that layer is outside SSH visibility/Claude's control if it ever needs to change.
+- `room-api.iscoded.com` (orange-cloud, HTTPS, valid Let's Encrypt cert) is a separate, unrelated placeholder for the future HTTP API from Phase 6 (leaderboard, awards, webhook) — see `deploy/nginx/room-api.iscoded.com.conf`. The game server itself doesn't use it.
+- Known gap: relies on the box's cloud-provider network allowing inbound UDP `60010` — it evidently does (the WAN test connected via the hostname), but that layer is outside SSH visibility/Claude's control if it ever needs to change.

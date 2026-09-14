@@ -30,22 +30,39 @@ Run `make help` for the full target list (server/client separately, custom port/
 - `--connect=<host>` — join a server as a client. Defaults to `127.0.0.1`.
 - `--port=<port>` — override the default port (`60010`).
 - `--name=<name>` — display name sent to the server.
+- `--bot` — run as a headless client driven by simple wander/stab AI instead of real input.
+  `make run-bots N=6 HOST=<host>` connects a swarm to a running server.
+- `--sim-latency=<ms>` / `--sim-loss=<0..1>` — artificially delay/drop this client's own outgoing
+  RPCs, for testing prediction/reconciliation locally without a real bad connection.
 - No flags at all → runs fully **offline** (single local player, no networking) for quick solo
   iteration in the editor.
 
-The current networking layer (`core/Net.cs`) is Phase 0 scaffolding only — plain ENet connect/host
-with no prediction or lag compensation yet. That's the subject of
-[`plan/phase-1-network-spike.md`](plan/phase-1-network-spike.md), the project's highest technical
-risk per the GDD.
+Movement is server-authoritative with client-side prediction + reconciliation; the temporary
+"stab" verb (real melee lands in Phase 2) uses server-side rewind lag compensation. See
+[`plan/phase-1-network-spike.md`](plan/phase-1-network-spike.md) for the architecture, the two
+real bugs found while building it, and real-WAN test numbers.
+
+### Deployed server
+
+A dedicated server is live at **`room-udp.iscoded.com:60010`** — connect with
+`make run-client HOST=room-udp.iscoded.com` or `godot --path . -- --connect=room-udp.iscoded.com`.
+It's DNS-only (Cloudflare grey-cloud): don't proxy this hostname, raw UDP can't cross Cloudflare's
+HTTP-only proxy. Redeploy with `make deploy-server`; check on it with `make deploy-status` /
+`make deploy-logs`. It runs isolated (own system user, own systemd unit) on a box shared with
+other apps — see `plan/phase-1-network-spike.md` for details.
+
+`room-api.iscoded.com` is a separate, unrelated placeholder (Cloudflare-proxied, HTTPS) for the
+future HTTP API from Phase 6 — see `deploy/nginx/room-api.iscoded.com.conf`.
 
 ## Project layout
 
 ```
-core/       # networking, tuning loader, signal bus, the Main scene/root script
-player/     # player scene + controller (movement, third-person camera)
-maps/room/  # the arena (grey-box)
-tuning/     # tuning.tres — the single source of truth for every gameplay number
-plan/       # phased build plan + status tracking
+core/          # networking, combat/rewind, ping, tuning loader, signal bus, debug overlay, Main scene
+player/        # player scene + controller (movement, camera, prediction, stab verb, bot AI)
+maps/room/     # the arena (grey-box)
+tuning/        # tuning.tres — the single source of truth for every gameplay number
+deploy/nginx/  # nginx configs for HTTP-facing subdomains (not the game server itself — that's raw UDP)
+plan/          # phased build plan + status tracking
 ```
 
 ## The tuning file
