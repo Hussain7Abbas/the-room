@@ -25,8 +25,8 @@ public class SettingsTests : TestClass
     [Test]
     public void EveryListedActionHasABinding()
     {
-        foreach (var action in new[] { "move_forward", "move_back", "move_left", "move_right", "jump", "dash",
-                     "attack_light", "attack_heavy", "parry", "ability", "scoreboard" })
+        foreach (var action in new[] { "move_forward", "move_back", "move_left", "move_right", "jump", "sprint", "dodge",
+                     "attack_light", "attack_heavy", "ability", "scoreboard" })
         {
             SettingsDialog.Bindings(action).ShouldNotBeEmpty($"action {action}");
         }

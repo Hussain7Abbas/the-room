@@ -8,7 +8,7 @@ namespace TheRoom.Animation;
 /// The visible body of a player: any humanoid model plus a HumanoidAnimationSet. It is purely
 /// cosmetic, and collision stays on the Player's capsule. Works for any model imported with the
 /// humanoid retarget preset (assets/animations/humanoid/README.md). Player.cs drives it through
-/// UpdateLocomotion and PlayAttack.
+/// UpdateLocomotion, PlayOneShot (attacks, dodge, ability), PlayDeath and Revive.
 /// </summary>
 public partial class CharacterModel : Node3D
 {
@@ -18,7 +18,7 @@ public partial class CharacterModel : Node3D
     // Standard humanoid name after retargeting, so a prop attaches the same way on every model.
     private const string HandBone = "RightHand";
 
-    public enum Clip { Idle, Run, Jump, LightAttack, HeavyAttack }
+    public enum Clip { Idle, Run, Jump, LightAttack, HeavyAttack, Dodge, Death, Ability }
 
     private static readonly Dictionary<Clip, StringName> ClipNames = new()
     {
@@ -27,6 +27,9 @@ public partial class CharacterModel : Node3D
         [Clip.Jump] = "jump",
         [Clip.LightAttack] = "light_attack",
         [Clip.HeavyAttack] = "heavy_attack",
+        [Clip.Dodge] = "dodge",
+        [Clip.Death] = "death",
+        [Clip.Ability] = "ability",
     };
 
     // The humanoid retarget renames the root bone to this on every model, so root-motion
@@ -35,9 +38,9 @@ public partial class CharacterModel : Node3D
 
     private AnimationPlayer _animator = null!;
     private readonly List<StandardMaterial3D> _materials = new();
-    private readonly Dictionary<Clip, float> _playbackSpeed = new();
     private Clip? _current;
     private float _oneShotRemaining;
+    private bool _dead; // holding the death pose until Revive()
     private float _authoredRunSpeed = 1f; // m/s the run clip's feet were animated for, at this model's scale
 
     /// <summary>One duplicated material per mesh surface. Player tints these with the character
@@ -110,6 +113,9 @@ public partial class CharacterModel : Node3D
     /// attack is still playing.</summary>
     public void UpdateLocomotion(float delta, Vector3 velocity, bool onFloor)
     {
+        if (_dead)
+            return;
+
         if (_oneShotRemaining > 0f)
         {
             _oneShotRemaining -= delta;
@@ -125,7 +131,7 @@ public partial class CharacterModel : Node3D
         else if (flatSpeed > 0.5f)
         {
             Play(Clip.Run);
-            // Match the feet to the ground instead of sliding; clamped so a dash doesn't blur.
+            // Match the feet to the ground instead of sliding; clamped so a sprint doesn't blur.
             _animator.SpeedScale = Mathf.Clamp(flatSpeed / _authoredRunSpeed, 0.6f, 1.6f);
         }
         else
@@ -134,16 +140,36 @@ public partial class CharacterModel : Node3D
         }
     }
 
-    public void PlayAttack(bool heavy, float duration)
+    /// <summary>Plays a one-shot clip (attack, dodge, ability, death) stretched or squeezed to
+    /// last <paramref name="duration"/> seconds. Locomotion resumes afterwards. Does nothing if this
+    /// set has no such clip, or if the body is dead.</summary>
+    public void PlayOneShot(Clip clip, float duration)
     {
-        var clip = heavy ? Clip.HeavyAttack : Clip.LightAttack;
-        if (!_animator.HasAnimation(ClipNames[clip]))
+        if (!_animator.HasAnimation(ClipNames[clip]) || (_dead && clip != Clip.Death))
             return;
+        var length = (float)_animator.GetAnimation(ClipNames[clip]).Length;
         _current = clip;
         _animator.SpeedScale = 1f;
-        _animator.Play(ClipNames[clip], customBlend: 0.05, customSpeed: _playbackSpeed[clip]);
+        _animator.Play(ClipNames[clip], customBlend: 0.05, customSpeed: duration > 0.01f ? length / duration : 1f);
         _animator.Seek(0, true);
         _oneShotRemaining = duration;
+    }
+
+    /// <summary>Health hit 0: fall, and stay down until <see cref="Revive"/>.</summary>
+    public void PlayDeath(float duration)
+    {
+        _dead = false; // so PlayOneShot accepts it even if a previous death wasn't revived
+        PlayOneShot(Clip.Death, duration);
+        _dead = true;
+    }
+
+    /// <summary>Respawned: back to normal locomotion.</summary>
+    public void Revive()
+    {
+        _dead = false;
+        _oneShotRemaining = 0f;
+        _current = null;
+        Play(Clip.Idle);
     }
 
     private void Play(Clip clip)
@@ -152,7 +178,7 @@ public partial class CharacterModel : Node3D
             return;
         _current = clip;
         _animator.SpeedScale = 1f;
-        _animator.Play(ClipNames[clip], customSpeed: _playbackSpeed.GetValueOrDefault(clip, 1f));
+        _animator.Play(ClipNames[clip]);
     }
 
     private AnimationLibrary BuildLibrary(HumanoidAnimationSet set, Skeleton3D? skeleton, float scale)
@@ -182,8 +208,13 @@ public partial class CharacterModel : Node3D
             library.AddAnimation(ClipNames[Clip.Jump], clip);
         }
 
-        AddAttack(library, Clip.LightAttack, set.LightAttack, set.LightAttackClipStart, set.LightAttackClipEnd, set.LightAttackDuration);
-        AddAttack(library, Clip.HeavyAttack, set.HeavyAttack, set.HeavyAttackClipStart, set.HeavyAttackClipEnd, set.HeavyAttackDuration);
+        AddOneShot(library, Clip.LightAttack, set.LightAttack, set.LightAttackClipStart, set.LightAttackClipEnd);
+        AddOneShot(library, Clip.HeavyAttack, set.HeavyAttack, set.HeavyAttackClipStart, set.HeavyAttackClipEnd);
+        // The roll dips and the death falls: their vertical hip motion is kept, only the
+        // horizontal drift goes (the body is moved by physics). The drop kick keeps its jump.
+        AddOneShot(library, Clip.Dodge, set.Dodge, set.DodgeClipStart, set.DodgeClipEnd);
+        AddOneShot(library, Clip.Death, set.Death, 0f, 0f);
+        AddOneShot(library, Clip.Ability, set.Ability, set.AbilityClipStart, set.AbilityClipEnd);
 
         var idleSource = HumanoidAnimationSet.FirstClip(set.Idle);
         if (idleSource is not null)
@@ -200,7 +231,7 @@ public partial class CharacterModel : Node3D
         return library;
     }
 
-    private void AddAttack(AnimationLibrary library, Clip clip, AnimationLibrary? source, float start, float end, float duration)
+    private static void AddOneShot(AnimationLibrary library, Clip clip, AnimationLibrary? source, float start, float end)
     {
         var animation = HumanoidAnimationSet.FirstClip(source);
         if (animation is null)
@@ -210,7 +241,6 @@ public partial class CharacterModel : Node3D
         var sliced = Slice(StripRootMotion(animation, clampRise: false, out _), start, sliceEnd);
         sliced.LoopMode = Godot.Animation.LoopModeEnum.None;
         library.AddAnimation(ClipNames[clip], sliced);
-        _playbackSpeed[clip] = duration > 0.01f ? (float)sliced.Length / duration : 1f;
     }
 
     /// <summary>Movement comes from the server-authoritative body, never the clip. Mixamo clips

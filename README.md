@@ -7,7 +7,8 @@ developer who built them. Made by the **Voidra** team with Godot 4.7 (.NET / C#)
 
 ## Features
 
-- **Third-person knife combat:** light, heavy lunge, parry, execute from behind, dash and jump.
+- **Third-person knife combat:** light, heavy lunge, execute from behind, an invulnerable dodge
+  roll, sprint and jump.
   Every hit is decided by the server with lag compensation, so every death is explainable.
 - **One ability per character,** built on a grammar the code enforces: every ability has a
   visible tell and a cooldown, and can be countered.
@@ -34,9 +35,9 @@ make run-local N=2    # a local server + 2 windowed clients
 To play online, open the project in Godot and press **Play**. The main menu connects to the
 public lobby, where you can join the main room, create your own, or practice alone.
 
-| Move | Look | Light | Heavy | Parry | Dash | Jump | Ability | Scoreboard | Menu |
+| Move | Look | Light | Heavy | Dodge | Sprint | Jump | Ability | Scoreboard | Menu |
 |---|---|---|---|---|---|---|---|---|---|
-| WASD | Mouse | LMB | RMB | Q | Shift | Space | E | Tab | Esc |
+| WASD | Mouse | LMB | RMB | Cmd / Ctrl | Shift (hold) | Space | E | Tab | Esc |
 
 `make help` lists everything else: bots, a local lobby, animation preview, tests and deploy.
 

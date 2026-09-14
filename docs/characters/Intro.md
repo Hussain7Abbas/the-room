@@ -15,10 +15,12 @@ Today the only model is **Zain** (`assets/characters/zain/zain.fbx`, Mixamo-rigg
 - The texture gets a light wash of the character's signature colour (25%), so skin stays skin.
 - The name label above each player shows the character colour at full strength.
 
-The shared animation set has **run, jump and stab**:
+The shared animation set has **run, jump, stab, dodge (roll) and death**:
 
 - the stab is used for both light and heavy attacks, with different slices;
-- idle is the stab clip's opening stance.
+- idle is the stab clip's opening stance;
+- Zain's own set (`assets/characters/zain/zain_animations.tres`) adds the **drop kick** for his
+  ability. `CharacterDef.AnimationsPath` points at it, loaded only on clients.
 
 ## Pages
 

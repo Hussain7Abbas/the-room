@@ -113,6 +113,12 @@ public abstract class Ability
 
     protected void Reveal(Player target, float durationSeconds) => target.ServerApplyReveal(durationSeconds);
 
+    /// <summary>Melee strike shared kit: hits the first player straight ahead within
+    /// <paramref name="reach"/>, resolved exactly like the knife (lag-compensated, dodges and spawn
+    /// protection pass through, stab sound). The killfeed names this ability. Returns whether it hit.</summary>
+    protected bool Strike(float reach, float radius, float damage, bool staggers) =>
+        Caster.ServerStrike(reach, radius, damage, Def.DisplayName, staggers);
+
     /// <summary>Zone Denial / Trap shared kit: a damage-over-time (or one-shot) area, broadcast
     /// from the caster so every client gets a visible copy — see Player.ServerSpawnDamageZone
     /// and AbilityZone's doc comment for why this goes through an RPC instead of a direct spawn.</summary>

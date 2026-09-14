@@ -10,12 +10,16 @@
 - `AbilityDef.cs` / `CharacterDef.cs`: Godot Resources holding identity and *shape*. Strength
   numbers live in `tuning.tres` → `AbilityNumbers` (`"<abilityId>.<param>"`).
 - `CharacterDef` also carries `Model`, `Animations` and `TintModel` (see `animation/`).
-- `CharacterRegistry.cs`: every playable character, built in C#. **`blink` and `firepatch` are
-  placeholder examples written by Claude, not real submissions.** Replace them, don't build on them.
+- `CharacterRegistry.cs`: every playable character, built in C#. **`zain`** (Drop Kick) is the
+  team's own character and the default pick. **`blink` and `firepatch` are placeholder examples
+  written by Claude, not real submissions.** Replace them, don't build on them.
+  - Load character assets **by path** (`AnimationsPath`), never with `GD.Load` in the registry.
+    It runs on the headless server, which has no imported FBX files.
 - `AbilityValidator.cs`: runs on every boot and in tests. Flags slot collisions, bad cooldowns,
   missing tell or counterplay text.
-- The shared kit (via the `Ability` helpers → `Player.Server*`): `ServerSweep` movement, slow
-  (≤ 1 s), reveal, `SpawnDamageZone` / `AbilityZone`.
+- The shared kit (via the `Ability` helpers → `Player.Server*`): `ServerSweep` movement,
+  `Strike` (a melee hit resolved like the knife), slow (≤ 1 s), reveal, `SpawnDamageZone` /
+  `AbilityZone`.
 
 ## Rules
 

@@ -34,11 +34,12 @@ for tick T, it compares it with its own prediction for T:
 ### Input packet
 
 ```
-SubmitInput(ulong tick, Vector2 moveDir, float yaw, int jumpCounter)
+SubmitInput(ulong tick, Vector2 moveDir, float yaw, int jumpCounter, bool sprint)
 ```
 
 - `moveDir` is the wanted direction **in world space** (x, z). The owner turns WASD into it
   relative to its camera. The server clamps it to length 1.
+- `sprint` is Shift held. It's a held state, so an unreliable packet is fine: the next one repeats it.
 - `yaw` is the **body's** facing. It isn't the camera's: see "Camera and facing" below.
 
 One-shot actions travel as **counters**, not "pressed this tick" flags. The packet is unreliable,
@@ -53,8 +54,8 @@ The camera and the body turn separately, the usual third-person setup:
   frame, even though it's a child of the body.
 - **The body turns to face where it moves** (`UpdateFacing`), smoothly (`TurnRate`). Walking back
   or sideways turns the character around, and the run animation plays forward.
-- **Attacks, dash and abilities aim with the camera.** `FaceAim()` snaps the body to the camera,
-  and an **aim lock** (0.8 s) keeps it there, so a lunge or dash doesn't curve with your
+- **Attacks and abilities aim with the camera.** `FaceAim()` snaps the body to the camera,
+  and an **aim lock** (0.8 s) keeps it there, so a lunge or kick doesn't curve with your
   movement. `RequestVerb(verb, yaw)` and `RequestAbility(yaw)` carry that yaw, and the server
   applies it before acting, instead of waiting for the next unreliable input packet.
 - Executes check the victim's **body** facing, so "behind" matches what everyone sees.
@@ -118,7 +119,9 @@ every peer.
 ## Cosmetics follow the server
 
 Anything the player sees about combat is cued by a server broadcast, never by a local key press:
-attack animations (`BroadcastAttackCue`), the stab sound on a landed hit (`BroadcastHitSound`),
+attack animations (`BroadcastAttackCue`), dodge rolls (`BroadcastDodgeCue`, except your own,
+which is predicted), death and revive (`BroadcastKill`, `BroadcastRevive`), the stab sound on a
+landed hit (`BroadcastHitSound`),
 spawn protection start and cancel (`BroadcastSpawnProtection`),
 ability tells, kills, death effects and announcements. A
 press the server rejects never shows a swing that didn't happen.

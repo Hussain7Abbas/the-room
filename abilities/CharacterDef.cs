@@ -21,8 +21,12 @@ public partial class CharacterDef : Resource
     [ExportGroup("Model & animation (any humanoid rig, see assets/animations/humanoid/README.md)")]
     /// <summary>Null means CharacterModel.DefaultModelPath (Zain).</summary>
     [Export] public PackedScene? Model;
-    /// <summary>Null means the shared HumanoidAnimationSet.DefaultPath.</summary>
+    /// <summary>Null means the shared HumanoidAnimationSet.DefaultPath (or AnimationsPath).</summary>
     [Export] public TheRoom.Animation.HumanoidAnimationSet? Animations;
+    /// <summary>A character's own animation set, by path, loaded only where models are shown
+    /// (clients). The dedicated server never imports FBX files, so the registry mustn't load
+    /// them at boot.</summary>
+    [Export] public string AnimationsPath = "";
     /// <summary>Tint the model with SilhouetteColor. An untextured model takes the full colour; a
     /// textured one (like Zain) only a light wash, so skin doesn't turn blue. Turn it off to
     /// show the texture untouched.</summary>
@@ -40,6 +44,6 @@ public partial class CharacterDef : Resource
     [ExportGroup("Voice lines (text placeholders — no audio assets yet, Phase 5)")]
     [Export] public string VoiceLineOnKill = "";
     [Export] public string VoiceLineOnDeath = "";
-    [Export] public string VoiceLineOnParry = "";
+    [Export] public string VoiceLineOnDodge = "";
     [Export(PropertyHint.MultilineText)] public string DeathAnimationNotes = "";
 }

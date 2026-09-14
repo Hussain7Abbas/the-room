@@ -11,14 +11,15 @@ Why: character owners control an ability's *shape* in code, and this file contro
 
 | Group | Keys (examples) |
 |---|---|
-| Light / Heavy / Parry / Dash / Execute | `LightWindup`, `LightDamagePercent`, `HeavyLungeRange`, `ParryActiveWindow`, `DashCooldown`, `ExecuteBehindAngleDegrees` |
+| Light / Heavy / Execute | `LightWindup`, `LightDamagePercent` (the normal hit), `HeavyDamagePercent` (1.5× light), `HeavyLungeRange`, `ExecuteBehindAngleDegrees` |
+| Dodge & movement | `DodgeDuration`, `DodgeDistance`, `DodgeCooldown`, `SprintSpeedMultiplier` |
 | Health & respawn | `MaxHealth`, `RespawnTime`, `RespawnTimeLastCall`, `SpawnProtectionDuration`, `DeathCamDuration` |
 | Golden Knife & bounty | `GoldenKnifeFirstSpawn`, `GoldenKnifeDuration`, `GoldenKnifeScoreMultiplier`, `BountyAnnounce*` |
 | Match | `ScoreTargetDuelPit`, `ScoreTargetChaos`, `MatchTimeLimitSeconds`, `LastCall*`, `ResultsScreenDurationSeconds` |
 | Ability grammar limits | `MinAbilityTellTime`, `MaxControlEffectDuration`, `AbilityCooldownMin/Max` |
 | Networking | `ServerTickRateHz`, `MaxRewindTimeSeconds`, `InterpolationDelaySeconds`, `PingIntervalSeconds`, `Reconciliation*` |
 | Misc | `VoidCatchY` (rescue height), `HopEnabled`, `HopImpulse` |
-| Per ability | `AbilityNumbers` dictionary: `"blink.range"`, `"firepatch.damage_per_second"`, … |
+| Per ability | `AbilityNumbers` dictionary: `"blink.range"`, `"firepatch.damage_per_second"`, `"dropkick.damage_multiplier"` (× light damage), … |
 
 ## Changing a number
 

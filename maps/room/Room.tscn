@@ -1,5 +1,7 @@
 [gd_scene load_steps=15 format=3]
 
+[ext_resource type="Script" path="res://maps/room/RoomEnvironment.cs" id="sky_script"]
+
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1
 background_color = Color(0.07, 0.08, 0.1, 1)
@@ -54,6 +56,7 @@ size = Vector3(6, 0.3, 3)
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_1")
+script = ExtResource("sky_script")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.7071, -0.5, 0.5, 0, 0.7071, 0.7071, -0.7071, -0.5, 0.5, 0, 8, 0)

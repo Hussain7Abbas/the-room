@@ -44,6 +44,9 @@ materials only lightly (`TexturedTintStrength`).
 ## Rules
 
 - Never animate position from a clip; the server-authoritative body moves the character.
+- Clips: Idle, Run, Jump, LightAttack, HeavyAttack, **Dodge, Death** (shared) and **Ability**
+  (only in a character's own set). One-shots play through `PlayOneShot(clip, duration)`; death
+  through `PlayDeath` and `Revive`.
 - New clip types need a `Clip` enum entry, a `HumanoidAnimationSet` field, `BuildLibrary`
   handling and a trigger in `Player.UpdateModelAnimation`.
 - After any change, check it in `make preview-animations` and in a rendered match.

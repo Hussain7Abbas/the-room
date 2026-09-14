@@ -41,7 +41,7 @@
 **Signature colour:** Orange (`#FF5A1A`)
 **Voice line on kill:** *(placeholder — no audio assets yet)*
 **Voice line on death:** *(placeholder)*
-**Voice line on parry:** *(placeholder)*
+**Voice line on dodge:** *(placeholder)*
 **Death animation notes:** *(placeholder — Phase 5)*
 
 ### Failure cases

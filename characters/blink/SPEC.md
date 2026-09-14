@@ -29,7 +29,7 @@
 
 **Cooldown:** 14s
 **Power budget:** strong = movement, weak = none
-**Counterplay (one sentence):** You can reposition, attack, or parry during the 0.3s flash before the blink actually happens — it's not instant, and it doesn't grant any damage, healing, or invulnerability.
+**Counterplay (one sentence):** You can reposition, attack, or roll away during the 0.3s flash before the blink actually happens — it's not instant, and it doesn't grant any damage, healing, or invulnerability.
 **What dynamic does this create in actual play?** Forces the victim to decide, the instant they see the flash, whether to commit to a punish on a now-repositioning target or hold their spacing — guessing wrong either way costs them something.
 
 ### Passive quirk
@@ -41,7 +41,7 @@
 **Signature colour:** Blue (`#4088FF`)
 **Voice line on kill:** *(placeholder — no audio assets yet)*
 **Voice line on death:** *(placeholder)*
-**Voice line on parry:** *(placeholder)*
+**Voice line on dodge:** *(placeholder)*
 **Death animation notes:** *(placeholder — Phase 5)*
 
 ### Failure cases

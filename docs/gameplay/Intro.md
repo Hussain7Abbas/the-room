@@ -14,7 +14,7 @@ Knife and Last Call.
 
 ## Pages
 
-- [Combat](combat.md): the verbs (light, heavy, parry, execute, dash, jump) and how they beat each other.
+- [Combat](combat.md): the verbs (light, heavy, execute, dodge, sprint, jump) and how they beat each other.
 - [Abilities](abilities.md): the one-ability-per-character grammar, the current abilities, and how to add one.
 - [Tuning](tuning.md): every number above lives in one file. How to change it safely.
 

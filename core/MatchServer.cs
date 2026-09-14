@@ -40,7 +40,7 @@ public partial class MatchServer : Node
     // ResetMatch() alongside score/bounty. Console prints double as the "structured log" this
     // phase's plan doc explicitly deferred building for real — genuinely enough for now since
     // nothing consumes it but the end-of-match announcement below.
-    private readonly Dictionary<long, int> _parries = new();
+    private readonly Dictionary<long, int> _dodges = new();
     private readonly Dictionary<long, int> _heavyWhiffs = new();
     private readonly Dictionary<long, int> _executesTaken = new(); // died to an execute this match
     private readonly Dictionary<long, int> _biggestBountyClaimed = new(); // largest single bounty collected in one kill
@@ -112,7 +112,7 @@ public partial class MatchServer : Node
         _bounty.Clear();
         _kills.Clear();
         _deaths.Clear();
-        _parries.Clear();
+        _dodges.Clear();
         _heavyWhiffs.Clear();
         _executesTaken.Clear();
         _biggestBountyClaimed.Clear();
@@ -287,7 +287,7 @@ public partial class MatchServer : Node
         }
 
         AddTop(_executesTaken, "MOST STABBED IN THE BACK", "times");
-        AddTop(_parries, "SHARPEST REFLEXES", "parries");
+        AddTop(_dodges, "UNTOUCHABLE", "dodged hits");
         AddTop(_heavyWhiffs, "ALL BARK, NO BITE", "whiffed heavies");
         AddTop(_biggestBountyClaimed, "HIGHWAY ROBBERY", "pts in one bounty");
 
@@ -347,13 +347,13 @@ public partial class MatchServer : Node
         Rpc(nameof(BroadcastScore), attackerId, _score[attackerId]);
     }
 
-    /// <summary>Server-only. Player.ResolveMeleeAttack calls this when a parry negates a hit —
-    /// Phase 5 award telemetry ("Sharpest Reflexes").</summary>
-    public void ServerRegisterParry(long defenderId)
+    /// <summary>Server-only. CombatServer reports every strike a player rolled through —
+    /// award telemetry ("Untouchable").</summary>
+    public void ServerRegisterDodge(long defenderId)
     {
         if (!_isAuthoritative)
             return;
-        _parries[defenderId] = _parries.GetValueOrDefault(defenderId) + 1;
+        _dodges[defenderId] = _dodges.GetValueOrDefault(defenderId) + 1;
     }
 
     /// <summary>Server-only. Player.ResolveMeleeAttack calls this when a heavy lands nobody —

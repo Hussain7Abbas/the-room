@@ -23,6 +23,13 @@ public partial class HumanoidAnimationSet : Resource
     [Export] public AnimationLibrary? Jump;
     [Export] public AnimationLibrary? LightAttack;
     [Export] public AnimationLibrary? HeavyAttack;
+    /// <summary>The roll (Cmd / Ctrl). Timed to Tuning.DodgeDuration when it plays.</summary>
+    [Export] public AnimationLibrary? Dodge;
+    /// <summary>Plays once when health reaches 0 and holds the last frame until respawn.</summary>
+    [Export] public AnimationLibrary? Death;
+    /// <summary>Character-specific: only a character whose ability is acted out has one (Zain's
+    /// drop kick, in zain_animations.tres). Plays on the ability's tell.</summary>
+    [Export] public AnimationLibrary? Ability;
 
     [ExportGroup("Attack clip playback")]
     /// <summary>Which slice of the attack clip to play, in seconds of the source clip. Mixamo
@@ -37,6 +44,18 @@ public partial class HumanoidAnimationSet : Resource
     /// slowed down to fit. Roughly windup + recovery from tuning.tres, so the swing lands with the hit.</summary>
     [Export] public float LightAttackDuration = 0.35f;
     [Export] public float HeavyAttackDuration = 0.9f;
+
+    [ExportGroup("Dodge, death and ability playback")]
+    /// <summary>Slice of the roll clip to play (the roll itself, without the get-up).</summary>
+    [Export] public float DodgeClipStart;
+    [Export] public float DodgeClipEnd;
+    /// <summary>The whole death clip, sped up to fit before respawn (Tuning.RespawnTime).</summary>
+    [Export] public float DeathDuration = 1.3f;
+    /// <summary>Slice of the ability clip and how long it plays. Choose them so the strike lands
+    /// as the ability's tell ends, since that's when the server applies the hit.</summary>
+    [Export] public float AbilityClipStart;
+    [Export] public float AbilityClipEnd;
+    [Export] public float AbilityDuration = 1.0f;
 
     public static Godot.Animation? FirstClip(AnimationLibrary? library)
     {

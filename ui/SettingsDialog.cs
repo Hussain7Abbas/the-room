@@ -33,14 +33,14 @@ public partial class SettingsDialog : ModalDialog
             ("Move left", "move_left", null),
             ("Move right", "move_right", null),
             ("Jump", "jump", null),
-            ("Dash", "dash", null),
+            ("Sprint (hold)", "sprint", null),
+            ("Dodge (roll)", "dodge", null),
             ("Look around", null, "Mouse"),
         }),
         ("COMBAT", new (string, string?, string?)[]
         {
             ("Light attack", "attack_light", null),
             ("Heavy attack (lunge)", "attack_heavy", null),
-            ("Parry", "parry", null),
             ("Ability", "ability", null),
         }),
         ("INTERFACE", new (string, string?, string?)[]
@@ -158,6 +158,7 @@ public partial class SettingsDialog : ModalDialog
 
     private static string Describe(InputEvent e) => e switch
     {
+        InputEventKey { PhysicalKeycode: Key.Meta } => OS.GetName() == "macOS" ? "Cmd" : "Win",
         InputEventKey key => OS.GetKeycodeString(LayoutKey(key)),
         InputEventMouseButton mouse => mouse.ButtonIndex switch
         {

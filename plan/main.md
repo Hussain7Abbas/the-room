@@ -39,6 +39,7 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
 | D4 | **Networking stack** | Godot high-level multiplayer over **ENet**, dedicated headless server on a **VPS** | Resolves the GDD §12 Steam question: free, self-hosted. |
 | D5 | **Jump / hop** | ~~Build no-jump first~~ → **jump on Space, on by default** (user request after first play, 2026-09-14). Dash moved to Shift. | GDD §5.1 leaves it `TBD`; `Tuning.HopEnabled` still turns it off for an A/B. |
 | D6 | Git | Done — repo already initialized by the user, `origin` = `github.com/Hussain7Abbas/the-room`, one commit (`init`). Moved to the **Voidra** org on 2026-09-14: `github.com/Voidra-iq/the-room`. | Tuning file must be version-controlled per GDD §9. |
+| D7 | **Dodge replaces parry and dash** | User request 2026-09-14: a roll on Cmd/Ctrl with **invulnerability to strikes for the whole roll**; parry removed; Shift is a held sprint. | Deliberately departs from GDD §5.1 ("no i-frames"). Readability is kept by the roll being a big, animated, server-broadcast action with a cooldown. |
 
 ## Change log
 - 2026-09-14 — v0.1 plan created.
@@ -92,3 +93,11 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
   - It's signed ad-hoc with Apple's `codesign`. Godot's built-in signer produced an app Apple Silicon killed at launch (exit 137, no output); the cause was found by re-signing with `codesign`, which ran.
   - Verified: the exported app reaches the main menu and connects to the live lobby.
   - `docs/building.md` explains the builds, where they go, and how to share an unnotarized Mac app.
+- 2026-09-14 — **Sprint, dodge, death, Zain's Drop Kick, sky.**
+  - Shift is a held sprint (6 → 9.6 m/s, predicted and sent with the input). Cmd/Ctrl rolls 3.5 m with strikes passing through (D7); your own roll is predicted.
+  - Parry is gone (verb, state, Q key, tuning, bots, award). The award is now "Untouchable" for dodged strikes.
+  - Heavy is 1.5× light. The death animation replaces the capsule and revives on respawn.
+  - **Zain** is a playable character (default) with **Drop Kick**: a 0.45 s leap, then 2× a light hit, dodgeable, acted out by the drop-kick clip. Clip slices were chosen from renders, and the new shared-kit `Strike` is used.
+  - The panorama skybox is added at run time on clients only, because the server has no imported textures.
+  - Verified: sprint 9.6 m/s and roll 3.62 m measured. A networked bot match had 20 kills, 7 drop-kick hits for 70 each, deaths and kicks seen in frames, and 0 server errors. Tests: 12 game, 9 lobby.
+

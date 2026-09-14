@@ -21,6 +21,24 @@ public class CharacterAnimationTests : TestClass
     private static HumanoidAnimationSet DefaultSet() =>
         GD.Load<HumanoidAnimationSet>(HumanoidAnimationSet.DefaultPath);
 
+    private static HumanoidAnimationSet ZainSet() =>
+        GD.Load<HumanoidAnimationSet>(CharacterRegistry.GetOrDefault("zain").AnimationsPath);
+
+    [Test]
+    public void ZainActsOutHisDropKick()
+    {
+        CharacterRegistry.GetOrDefault("zain").Ability!.Id.ShouldBe("dropkick");
+        var model = CharacterModel.Create(GD.Load<PackedScene>(CharacterModel.DefaultModelPath), ZainSet(), 1.8f);
+        try
+        {
+            model.GetClip(CharacterModel.Clip.Ability).ShouldNotBeNull();
+        }
+        finally
+        {
+            model.Free();
+        }
+    }
+
     private static IEnumerable<(string Name, PackedScene Scene)> AllModels()
     {
         yield return ("default", GD.Load<PackedScene>(CharacterModel.DefaultModelPath));
@@ -32,7 +50,8 @@ public class CharacterAnimationTests : TestClass
     public void EveryClipTargetsBonesPresentOnEveryModel()
     {
         var set = DefaultSet();
-        var clips = new[] { set.Idle, set.Run, set.Jump, set.LightAttack, set.HeavyAttack }
+        var zain = ZainSet();
+        var clips = new[] { set.Idle, set.Run, set.Jump, set.LightAttack, set.HeavyAttack, set.Dodge, set.Death, zain.Ability }
             .Select(HumanoidAnimationSet.FirstClip)
             .Where(c => c is not null)
             .ToList();
@@ -83,8 +102,14 @@ public class CharacterAnimationTests : TestClass
         var model = CharacterModel.Create(GD.Load<PackedScene>(CharacterModel.DefaultModelPath), DefaultSet(), 1.8f);
         try
         {
+            // Ability is character-specific: the shared set has none, Zain's has the drop kick.
             foreach (var clip in System.Enum.GetValues<CharacterModel.Clip>())
-                model.GetClip(clip).ShouldNotBeNull($"clip {clip}");
+            {
+                if (clip == CharacterModel.Clip.Ability)
+                    model.GetClip(clip).ShouldBeNull();
+                else
+                    model.GetClip(clip).ShouldNotBeNull($"clip {clip}");
+            }
 
             var run = model.GetClip(CharacterModel.Clip.Run)!;
             run.LoopMode.ShouldBe(Godot.Animation.LoopModeEnum.Linear);

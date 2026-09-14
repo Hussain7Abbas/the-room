@@ -38,7 +38,7 @@ X.Xs   effect ends
 **Signature colour:**
 **Voice line on kill:**
 **Voice line on death:**
-**Voice line on parry:**
+**Voice line on dodge:**
 **Death animation notes:**
 
 ### Failure cases

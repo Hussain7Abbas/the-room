@@ -84,7 +84,10 @@ public partial class CombatServer : Node
     /// this one implementation despite having different reach (Tuning.Light*/Heavy* in Player.cs).
     /// </summary>
     /// <returns>The peer id of the closest hit victim, or null if nobody was in the cone.</returns>
-    public long? TryResolveMeleeHit(long attackerId, Vector3 attackerPos, Vector3 attackerForward, float range, float hitRadius, float rewindSeconds)
+    /// <param name="onDodged">Called for each player the strike would have hit but who was
+    /// mid-roll: their hitbox is skipped, so the strike can still land on someone behind them.</param>
+    public long? TryResolveMeleeHit(long attackerId, Vector3 attackerPos, Vector3 attackerForward, float range, float hitRadius, float rewindSeconds,
+        System.Action<long>? onDodged = null)
     {
         var tuning = TuningService.Instance;
         rewindSeconds = Mathf.Clamp(rewindSeconds, 0f, tuning.MaxRewindTimeSeconds);
@@ -110,6 +113,12 @@ public partial class CombatServer : Node
             var lateral = (toTarget - forward * forwardDistance).Length();
             if (lateral > hitRadius)
                 continue;
+
+            if (GetPlayerNode(peerId) is { IsDodging: true })
+            {
+                onDodged?.Invoke(peerId);
+                continue;
+            }
 
             if (forwardDistance < closestDistance)
             {

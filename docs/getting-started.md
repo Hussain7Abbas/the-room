@@ -37,8 +37,8 @@ Ways to play locally:
 | Look (camera) | Mouse. Your character faces the way you move, and turns to the camera when you attack. |
 | Light attack | Left mouse |
 | Heavy attack (lunge) | Right mouse |
-| Parry | Q |
-| Dash | Shift |
+| Dodge (roll, invulnerable while rolling) | Cmd (Mac) / Ctrl |
+| Sprint | Shift (hold) |
 | Jump | Space |
 | Ability | E |
 | Scoreboard | Tab (hold) |
@@ -61,7 +61,7 @@ godot --path . -- --connect=room-udp.iscoded.com --port=60010 --name=Ana --chara
 | `--connect=<host>` | client | Join directly, skipping the menu. |
 | `--port=<n>` | both | Port to listen on or connect to (default 60010). |
 | `--name=<name>` | client | Display name (the menu's name field overrides it). |
-| `--character=<id>` | client | `blink` or `firepatch` (see `abilities/CharacterRegistry.cs`). |
+| `--character=<id>` | client | `zain` (default), `blink` or `firepatch` (see `abilities/CharacterRegistry.cs`). |
 | `--bot` | client | Headless AI player (wander, attack, use ability). Quits when its session ends. |
 | `--sim-latency=<ms>`, `--sim-loss=<0..1>` | client | Delay or drop this client's own outgoing RPCs (testing only). |
 | `--config=duelpit\|chaos` | server | Score target (25 or 40, from tuning). |

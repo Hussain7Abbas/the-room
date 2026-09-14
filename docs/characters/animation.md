@@ -53,7 +53,7 @@ model has.
    - set `AttackDuration` to windup + recovery from `tuning.tres`.
 5. Run `make test`.
 
-**A new kind of move** (say, a parry animation) needs a little code:
+**A new kind of move** (say, a hit-react animation) needs a little code:
 
 - a `Clip` enum value and a `HumanoidAnimationSet` field;
 - handling in `CharacterModel.BuildLibrary`;
@@ -100,6 +100,11 @@ so it works on every retargeted model. It then instances the character's `HeldPr
 | Jump | `jump.fbx` | whole | while airborne |
 | Light attack | `stab.fbx` | 0.7–1.3 s | 0.35 s |
 | Heavy attack | `stab.fbx` | 0.2–2.1 s | 1.0 s |
+| Dodge (roll) | `dodge.fbx` | 0.25–1.25 s (the roll, without the get-up) | `Tuning.DodgeDuration` (0.55 s) |
+| Death | `death.fbx` | whole | 1.3 s, then holds the pose until respawn |
+| Ability (Zain only) | `dropkick.fbx` | 0.5–2.6 s | 1.0 s: the kick lands at 0.45 s, when the tell ends |
 
-Missing today: dedicated idle, parry, dash, hit-react and death clips. The death effect is still a
-grey-box capsule.
+The roll and death keep their **vertical** hip motion (the dip and the fall), and the drop kick
+keeps its jump. Only the horizontal drift is stripped.
+
+Missing today: a dedicated idle and a hit-react clip.

@@ -31,39 +31,39 @@ public partial class Main : Node3D
 	public override void _Ready()
 	{
 		// Connects a join queued by the menu (or --connect) now that the spawner's target exists,
-        // or makes this an offline session when Main.tscn is run straight from the editor.
-        Net.Instance.BeginGameScene();
-        MatchServer.Instance.BeginSession();
+		// or makes this an offline session when Main.tscn is run straight from the editor.
+		Net.Instance.BeginGameScene();
+		MatchServer.Instance.BeginSession();
 
-        _playersContainer = GetNode<Node3D>("PlayersContainer");
+		_playersContainer = GetNode<Node3D>("PlayersContainer");
 
-        var spawnPoints = GetNodeOrNull<Node3D>("Room/SpawnPoints");
-        if (spawnPoints is not null)
-        {
-            foreach (var child in spawnPoints.GetChildren())
-            {
-                if (child is not Marker3D marker)
-                    continue;
+		var spawnPoints = GetNodeOrNull<Node3D>("Room/SpawnPoints");
+		if (spawnPoints is not null)
+		{
+			foreach (var child in spawnPoints.GetChildren())
+			{
+				if (child is not Marker3D marker)
+					continue;
 
-                _spawnMarkers.Add(marker);
-                _staticSpawnMarkers.Add(marker);
-            }
-        }
+				_spawnMarkers.Add(marker);
+				_staticSpawnMarkers.Add(marker);
+			}
+		}
 
-        Events.Instance.PlayerConnected += OnPlayerConnected;
-        Events.Instance.PlayerDisconnected += OnPlayerDisconnected;
+		Events.Instance.PlayerConnected += OnPlayerConnected;
+		Events.Instance.PlayerDisconnected += OnPlayerDisconnected;
 
-        // A dedicated server never plays — it only spawns nodes for real connecting peers
-        // (OnPlayerConnected below). Offline mode is a single local player with no server at all.
-        if (Net.Instance.IsOffline)
-        {
-            SpawnPlayer(1);
-        }
-    }
+		// A dedicated server never plays — it only spawns nodes for real connecting peers
+		// (OnPlayerConnected below). Offline mode is a single local player with no server at all.
+		if (Net.Instance.IsOffline)
+		{
+			SpawnPlayer(1);
+		}
+	}
 
-    public override void _ExitTree()
-    {
-        // Leaving a room back to the menu. These statics and the match state would otherwise
+	public override void _ExitTree()
+	{
+		// Leaving a room back to the menu. These statics and the match state would otherwise
 		// leak into the next room: freed spawn markers, old names, last room's scores.
 		Events.Instance.PlayerConnected -= OnPlayerConnected;
 		Events.Instance.PlayerDisconnected -= OnPlayerDisconnected;

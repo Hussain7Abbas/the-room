@@ -35,7 +35,7 @@ Every kill goes through `MatchServer.ServerRegisterKill(attacker, victim, method
 `EndMatch()` does four things:
 
 1. Picks the MVP (highest score) and computes **awards** from match telemetry: Most Stabbed In The
-   Back, Sharpest Reflexes, All Bark No Bite, Highway Robbery. A stat of 0 gets no award.
+   Back, Untouchable (most strikes dodged), All Bark No Bite, Highway Robbery. A stat of 0 gets no award.
 2. Broadcasts the results, which fill the results panel in `KillfeedUI`.
 3. **Reports the match to the lobby** (`RoomReporter.ReportMatch`, lobby rooms only): every player
    who took part, including anyone who scored and then left, with character, score, kills, deaths

@@ -10,17 +10,15 @@ LightRange = 2.0
 LightHitRadius = 0.9
 LightRecovery = 0.15
 HeavyWindup = 0.4
-HeavyDamagePercent = 0.65
+HeavyDamagePercent = 0.525
 HeavyLungeRange = 3.0
 HeavyHitRadius = 1.1
 HeavyRecovery = 0.6
 HeavyStaggerDuration = 0.4
-ParryActiveWindow = 0.15
-ParryCooldown = 3.0
-ParryStaggerDuration = 0.5
-DashCooldown = 4.0
-DashDistance = 4.0
-DashDuration = 0.18
+DodgeDuration = 0.55
+DodgeDistance = 3.5
+DodgeCooldown = 1.2
+SprintSpeedMultiplier = 1.6
 ExecuteAnimationLock = 0.6
 ExecuteBehindAngleDegrees = 60.0
 MaxHealth = 100.0
@@ -64,5 +62,11 @@ AbilityNumbers = {
 "firepatch.range": 8.0,
 "firepatch.radius": 2.5,
 "firepatch.duration": 4.0,
-"firepatch.damage_per_second": 20.0
+"firepatch.damage_per_second": 20.0,
+"dropkick.tell_seconds": 0.45,
+"dropkick.cooldown": 14.0,
+"dropkick.range": 3.5,
+"dropkick.reach": 1.8,
+"dropkick.hit_radius": 1.2,
+"dropkick.damage_multiplier": 2.0
 }

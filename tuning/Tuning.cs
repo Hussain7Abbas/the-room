@@ -19,21 +19,21 @@ public partial class Tuning : Resource
 
     [ExportGroup("Melee — Heavy Lunge")]
     [Export] public float HeavyWindup = 0.40f;
-    [Export] public float HeavyDamagePercent = 0.65f;
+    [Export] public float HeavyDamagePercent = 0.525f; // 1.5x a light (normal) hit
     [Export] public float HeavyLungeRange = 3.0f;
     [Export] public float HeavyHitRadius = 1.1f;
     [Export] public float HeavyRecovery = 0.6f;
     [Export] public float HeavyStaggerDuration = 0.4f;
 
-    [ExportGroup("Melee — Parry")]
-    [Export] public float ParryActiveWindow = 0.15f;
-    [Export] public float ParryCooldown = 3.0f;
-    [Export] public float ParryStaggerDuration = 0.5f;
+    // The roll replaces parry and the old dash (user decision 2026-09-14, plan/main.md D7): strikes
+    // pass through you for the whole roll.
+    [ExportGroup("Dodge (roll)")]
+    [Export] public float DodgeDuration = 0.55f;
+    [Export] public float DodgeDistance = 3.5f;
+    [Export] public float DodgeCooldown = 1.2f; // after the roll ends
 
-    [ExportGroup("Melee — Dash")]
-    [Export] public float DashCooldown = 4.0f;
-    [Export] public float DashDistance = 4.0f;
-    [Export] public float DashDuration = 0.18f;
+    [ExportGroup("Movement")]
+    [Export] public float SprintSpeedMultiplier = 1.6f; // while Shift is held
 
     [ExportGroup("Melee — Execute")]
     [Export] public float ExecuteAnimationLock = 0.6f;

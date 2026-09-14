@@ -46,7 +46,7 @@ public static class CharacterRegistry
             WeakAxis = PowerAxis.None,
             UsesCooldown = true,
             TellDescription = "A bright blue flash on the caster's whole body, 0.3s before the blink moves them (no audio asset yet — Phase 5).",
-            CounterplaySentence = "You can reposition, attack, or parry during the 0.3s flash before the blink actually happens — it's not instant, and it doesn't grant any damage, healing, or invulnerability.",
+            CounterplaySentence = "You can reposition, attack, or roll away during the 0.3s flash before the blink actually happens — it's not instant, and it doesn't grant any damage, healing, or invulnerability.",
             DynamicCreated = "Forces the victim to decide, the instant they see the flash, whether to commit to a punish on a now-repositioning target or hold their spacing — guessing wrong either way costs them something.",
             FailureCase = "Useless as a panic button mid-exchange: the 0.3s tell means anyone already swinging at you will land their hit before you're gone. It only helps you get TO or AWAY FROM a fight that hasn't started yet.",
         };
@@ -63,7 +63,7 @@ public static class CharacterRegistry
             PassiveWhyItFits = "Small, flavour-only, doesn't change a duel's outcome — matches the ability's whole identity of 'always just out of reach.'",
             VoiceLineOnKill = "(placeholder)",
             VoiceLineOnDeath = "(placeholder)",
-            VoiceLineOnParry = "(placeholder)",
+            VoiceLineOnDodge = "(placeholder)",
             DeathAnimationNotes = "(placeholder — Phase 5)",
         };
 
@@ -93,12 +93,46 @@ public static class CharacterRegistry
             PassiveWhyItFits = "Small, flavour-only; a slightly sneakier fit for someone who wants you to walk into a trap you didn't hear coming.",
             VoiceLineOnKill = "(placeholder)",
             VoiceLineOnDeath = "(placeholder)",
-            VoiceLineOnParry = "(placeholder)",
+            VoiceLineOnDodge = "(placeholder)",
             DeathAnimationNotes = "(placeholder — Phase 5)",
+        };
+
+        // Zain: the team's own character (the model under every character today), with the
+        // drop kick the user designed (2026-09-14). See characters/zain/SPEC.md.
+        var dropKickAbility = new AbilityDef
+        {
+            Id = "dropkick",
+            DisplayName = "Drop Kick",
+            Slot = ArchetypeSlot.Burst,
+            StrongAxis = PowerAxis.Damage,
+            WeakAxis = PowerAxis.Movement,
+            UsesCooldown = true,
+            TellDescription = "Zain crouches and leaps for 0.45s before both feet land. The jump itself is the warning, plus a cyan flash.",
+            CounterplaySentence = "Roll or sidestep during the 0.45s leap: it only hits what is straight in front of him when he lands.",
+            DynamicCreated = "Zain can close 3.5m and hit twice as hard as a knife, so standing still in front of him is a gamble, but a whiffed kick puts him on a 14s cooldown right in your face.",
+            FailureCase = "Useless against anyone who rolls through it or isn't dead ahead; it's a straight line, and the leap announces it.",
+        };
+
+        var zain = new CharacterDef
+        {
+            Id = "zain",
+            DisplayName = "Zain",
+            OwnerName = "Zain (Voidra team)",
+            OneLinePersonality = "Settles every argument with both feet.",
+            SilhouetteColor = new Color(0.35f, 0.85f, 0.45f), // green
+            Ability = dropKickAbility,
+            AnimationsPath = "res://assets/characters/zain/zain_animations.tres",
+            PassiveDescription = "(none yet)",
+            PassiveWhyItFits = "(none yet)",
+            VoiceLineOnKill = "(placeholder)",
+            VoiceLineOnDeath = "(placeholder)",
+            VoiceLineOnDodge = "(placeholder)",
+            DeathAnimationNotes = "Mixamo death clip (shared).",
         };
 
         return new Dictionary<string, CharacterDef>
         {
+            [zain.Id] = zain,
             [blink.Id] = blink,
             [firePatch.Id] = firePatch,
         };

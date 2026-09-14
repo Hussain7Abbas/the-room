@@ -18,7 +18,7 @@ code: see "Keeping docs current" below.
 | ├ [Sessions & scenes](architecture/sessions-and-scenes.md) | menu → room → menu, practice, how a join connects |
 | └ [Match loop](architecture/match-loop.md) | scoring, bounty, Golden Knife, Last Call, results, reporting |
 | [Gameplay](gameplay/Intro.md) | the rules players experience |
-| ├ [Combat](gameplay/combat.md) | light, heavy, parry, execute, dash, jump |
+| ├ [Combat](gameplay/combat.md) | light, heavy, execute, dodge, sprint, jump |
 | ├ [Abilities](gameplay/abilities.md) | the ability grammar and adding an ability |
 | └ [Tuning](gameplay/tuning.md) | where every gameplay number lives and how to change it |
 | [Characters & animation](characters/Intro.md) | the character pipeline |
