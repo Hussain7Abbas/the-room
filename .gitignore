@@ -14,3 +14,9 @@ obj/
 
 # Runtime data (core/SeasonStats.cs writes this on the running server, per-deployment, never committed)
 /season_stats.json
+
+# Lobby service runtime data (services/lobby, match history DB — lives on the server)
+*.db
+*.db-shm
+*.db-wal
+/.lobby/

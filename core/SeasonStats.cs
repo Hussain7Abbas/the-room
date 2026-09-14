@@ -43,7 +43,10 @@ public partial class SeasonStats : Node
     public override void _Ready()
     {
         Instance = this;
-        _isServer = Net.Instance.IsServer; // real dedicated server only — not offline solo testing
+        // Real dedicated server only, and only one NOT started by the lobby. Lobby rooms share a
+        // working directory, so several of them writing this one JSON file would overwrite each
+        // other; their results go to the lobby's match history instead (core/RoomReporter.cs).
+        _isServer = Net.Instance.IsServer && Net.Instance.LobbyUrl is null;
         if (_isServer)
             Load();
     }

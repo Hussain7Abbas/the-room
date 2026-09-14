@@ -1,0 +1,44 @@
+# The Room lobby: room manager + match history API (services/lobby).
+# It starts one headless Godot game server per room (the permanent main room on MAIN_ROOM_PORT,
+# player-created rooms on ROOM_PORT_MIN..MAX), so stopping this unit stops every room too.
+# Installed by `make deploy-server`. See docs/server-config.md for a from-scratch install.
+
+[Unit]
+Description=The Room - lobby (rooms + match history API)
+After=network.target
+
+[Service]
+Type=simple
+User=theroom
+Group=theroom
+WorkingDirectory=/opt/the-room
+Environment=HOME=/opt/the-room
+Environment=PATH=/opt/the-room/dotnet:/usr/bin:/bin
+Environment=DOTNET_ROOT=/opt/the-room/dotnet
+Environment=Logging__Console__FormatterName=systemd
+
+# Lobby settings (services/lobby/LobbySettings.cs)
+Environment=LOBBY_LISTEN=http://127.0.0.1:5310
+Environment=GODOT_BIN=/opt/the-room/godot-app/Godot_v4.7.2-stable_mono_linux_x86_64/Godot_v4.7.2-stable_mono_linux.x86_64
+Environment=GAME_PATH=/opt/the-room/app
+Environment=LOBBY_DB=/opt/the-room/data/lobby.db
+Environment=PUBLIC_HOST=room-udp.iscoded.com
+Environment=MAIN_ROOM_PORT=60010
+Environment=ROOM_PORT_MIN=60011
+Environment=ROOM_PORT_MAX=60030
+Environment=MAX_ROOMS=4
+Environment=ROOM_IDLE_SECONDS=300
+
+ExecStart=/opt/the-room/dotnet/dotnet /opt/the-room/lobby/TheRoom.Lobby.dll
+Restart=on-failure
+RestartSec=3
+KillMode=control-group
+TimeoutStopSec=15
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/the-room/app /opt/the-room/.local /opt/the-room/data
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

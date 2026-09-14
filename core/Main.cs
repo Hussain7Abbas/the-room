@@ -30,6 +30,11 @@ public partial class Main : Node3D
 
     public override void _Ready()
     {
+        // Connects a join queued by the menu (or --connect) now that the spawner's target exists,
+        // or makes this an offline session when Main.tscn is run straight from the editor.
+        Net.Instance.BeginGameScene();
+        MatchServer.Instance.BeginSession();
+
         _playersContainer = GetNode<Node3D>("PlayersContainer");
 
         var spawnPoints = GetNodeOrNull<Node3D>("Room/SpawnPoints");
@@ -54,6 +59,17 @@ public partial class Main : Node3D
         {
             SpawnPlayer(1);
         }
+    }
+
+    public override void _ExitTree()
+    {
+        // Leaving a room back to the menu. These statics and the match state would otherwise
+        // leak into the next room: freed spawn markers, old names, last room's scores.
+        Events.Instance.PlayerConnected -= OnPlayerConnected;
+        Events.Instance.PlayerDisconnected -= OnPlayerDisconnected;
+        _staticSpawnMarkers.Clear();
+        _playerNames.Clear();
+        MatchServer.Instance.EndSession();
     }
 
     public static Marker3D? PickRandomSpawn()

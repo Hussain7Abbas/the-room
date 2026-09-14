@@ -4,6 +4,7 @@ using TheRoom.Abilities;
 using TheRoom.Animation;
 using TheRoom.Config;
 using TheRoom.Core;
+using TheRoom.UI;
 
 namespace TheRoom.Entities;
 
@@ -222,7 +223,7 @@ public partial class Player : CharacterBody3D
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (!_isOwner || _isBot)
+        if (!_isOwner || _isBot || GameMenu.IsOpen)
             return;
 
         if (@event is InputEventMouseMotion mouseMotion && Input.MouseMode == Input.MouseModeEnum.Captured)
@@ -237,13 +238,6 @@ public partial class Player : CharacterBody3D
             var armRotation = _springArm.Rotation;
             armRotation.X = _pitchRadians;
             _springArm.Rotation = armRotation;
-        }
-
-        if (@event.IsActionPressed("ui_cancel"))
-        {
-            Input.MouseMode = Input.MouseMode == Input.MouseModeEnum.Captured
-                ? Input.MouseModeEnum.Visible
-                : Input.MouseModeEnum.Captured;
         }
 
         if (IsDead)
@@ -361,14 +355,19 @@ public partial class Player : CharacterBody3D
     private void RunOfflinePhysics(double delta)
     {
         if (IsDead) return;
-        var inputDir = Input.GetVector("move_left", "move_right", "move_forward", "move_back");
-        SimulateStep(inputDir, delta, Input.IsActionJustPressed("jump"));
+        SimulateStep(ReadMoveInput(), delta, !GameMenu.IsOpen && Input.IsActionJustPressed("jump"));
     }
+
+    /// <summary>WASD for the local human; nothing while the Esc menu is open (the match keeps
+    /// running, so the character just stands still).</summary>
+    private static Vector2 ReadMoveInput() => GameMenu.IsOpen
+        ? Vector2.Zero
+        : Input.GetVector("move_left", "move_right", "move_forward", "move_back");
 
     private void RunPredictedPhysics(double delta)
     {
-        var inputDir = _isBot ? _botMoveInput : Input.GetVector("move_left", "move_right", "move_forward", "move_back");
-        var jump = !_isBot && !IsDead && Input.IsActionJustPressed("jump");
+        var inputDir = _isBot ? _botMoveInput : ReadMoveInput();
+        var jump = !_isBot && !IsDead && !GameMenu.IsOpen && Input.IsActionJustPressed("jump");
         if (jump)
             _jumpCounter++;
         SimulateStep(inputDir, delta, jump);

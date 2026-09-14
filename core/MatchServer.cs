@@ -25,10 +25,16 @@ public partial class MatchServer : Node
     private double _matchElapsed;
     private double _resultsTimeRemaining;
     private int _scoreTarget;
-    private bool _isAuthoritative; // this peer actually runs match logic (server, or offline-solo)
+    // This peer actually runs match logic (server, or offline-solo). Read live: a client can
+    // switch between menu, practice and online rooms without restarting the game.
+    private bool _isAuthoritative => Net.Instance.IsServer || Net.Instance.IsOffline;
+    // True while the game scene (Main.tscn) is loaded. The main menu has no match to run.
+    private bool _sessionActive;
 
     private readonly Dictionary<long, int> _score = new();
     private readonly Dictionary<long, int> _bounty = new();
+    private readonly Dictionary<long, int> _kills = new();
+    private readonly Dictionary<long, int> _deaths = new();
 
     // Phase 5 award telemetry (GDD §7 "award titles"). All server-only, all reset in
     // ResetMatch() alongside score/bounty. Console prints double as the "structured log" this
@@ -39,6 +45,12 @@ public partial class MatchServer : Node
     private readonly Dictionary<long, int> _executesTaken = new(); // died to an execute this match
     private readonly Dictionary<long, int> _biggestBountyClaimed = new(); // largest single bounty collected in one kill
 
+    public string StateName => _state switch
+    {
+        MatchState.LastCall => "last call",
+        MatchState.Ended => "results",
+        _ => "playing",
+    };
     public bool IsLastCall => _state == MatchState.LastCall;
     public bool IsResults => _state == MatchState.Ended;
     public int GetScore(long peerId) => _score.GetValueOrDefault(peerId);
@@ -66,9 +78,47 @@ public partial class MatchServer : Node
     public override void _Ready()
     {
         Instance = this;
-        _isAuthoritative = Net.Instance.IsServer || Net.Instance.IsOffline;
+    }
+
+    /// <summary>Called by Main when the game scene loads (dedicated server, online room or
+    /// practice). Starts a fresh match with this session's config.</summary>
+    public void BeginSession()
+    {
+        ClearMatchState();
         _scoreTarget = Net.Instance.IsChaosConfig ? TuningService.Instance.ScoreTargetChaos : TuningService.Instance.ScoreTargetDuelPit;
+        _lastSyncedState = MatchState.InProgress;
+        _clockSyncTimer = 0;
+        LastMvpText = "";
+        LastAwards = System.Array.Empty<string>();
+        LastStandings = System.Array.Empty<(string, int)>();
+        _sessionActive = true;
+    }
+
+    /// <summary>Called by Main when the game scene unloads (leaving a room). The next room or
+    /// practice session must not inherit this one's scores, knife or results.</summary>
+    public void EndSession()
+    {
+        _sessionActive = false;
+        SetKnifeVisual(false);
+        ClearMatchState();
+    }
+
+    private void ClearMatchState()
+    {
+        _state = MatchState.InProgress;
+        _matchElapsed = 0;
+        _resultsTimeRemaining = 0;
+        _score.Clear();
+        _bounty.Clear();
+        _kills.Clear();
+        _deaths.Clear();
+        _parries.Clear();
+        _heavyWhiffs.Clear();
+        _executesTaken.Clear();
+        _biggestBountyClaimed.Clear();
+        _knifeState = KnifeState.Respawning;
         _knifeTimer = TuningService.Instance.GoldenKnifeFirstSpawn;
+        _knifeHolderId = -1;
     }
 
     private double _clockSyncTimer;
@@ -76,6 +126,9 @@ public partial class MatchServer : Node
 
     public override void _PhysicsProcess(double delta)
     {
+        if (!_sessionActive)
+            return;
+
         if (!_isAuthoritative)
         {
             // Non-authoritative peers never run match logic — only a local display countdown
@@ -191,6 +244,24 @@ public partial class MatchServer : Node
         // results webhook. See core/SeasonStats.cs.
         SeasonStats.Instance.RecordMatch(standings, awards);
         SeasonStats.Instance.PostResultsWebhook(mvpText, standings, awards);
+
+        // Match history (lobby-managed rooms only): everyone who played, including anyone who
+        // scored and then left, with the character they were playing if still connected.
+        var characters = new Dictionary<long, string>();
+        foreach (var player in CombatServer.Instance.AllPlayers())
+            characters[player.PeerId] = player.Character?.Id ?? "";
+        var peers = new HashSet<long>(_score.Keys);
+        peers.UnionWith(_kills.Keys);
+        peers.UnionWith(_deaths.Keys);
+        peers.UnionWith(characters.Keys);
+
+        var report = new List<RoomReporter.PlayerResult>();
+        foreach (var id in peers)
+        {
+            report.Add(new RoomReporter.PlayerResult(Main.GetPlayerName(id), characters.GetValueOrDefault(id, ""),
+                _score.GetValueOrDefault(id), _kills.GetValueOrDefault(id), _deaths.GetValueOrDefault(id)));
+        }
+        RoomReporter.Instance.ReportMatch(_matchElapsed, report, awards);
     }
 
     /// <summary>GDD §7 "award titles" — computed from this match's telemetry, one line per
@@ -226,18 +297,7 @@ public partial class MatchServer : Node
     private void ResetMatch()
     {
         GD.Print("[Match] New match starting.");
-        _state = MatchState.InProgress;
-        _matchElapsed = 0;
-        _score.Clear();
-        _bounty.Clear();
-        _parries.Clear();
-        _heavyWhiffs.Clear();
-        _executesTaken.Clear();
-        _biggestBountyClaimed.Clear();
-
-        _knifeState = KnifeState.Respawning;
-        _knifeTimer = TuningService.Instance.GoldenKnifeFirstSpawn;
-        _knifeHolderId = -1;
+        ClearMatchState();
 
         foreach (var player in CombatServer.Instance.AllPlayers())
             player.ServerMatchReset();
@@ -260,6 +320,8 @@ public partial class MatchServer : Node
             points = Mathf.RoundToInt(points * tuning.GoldenKnifeScoreMultiplier);
 
         _score[attackerId] = _score.GetValueOrDefault(attackerId) + points;
+        _kills[attackerId] = _kills.GetValueOrDefault(attackerId) + 1;
+        _deaths[victimId] = _deaths.GetValueOrDefault(victimId) + 1;
         _bounty[attackerId] = _bounty.GetValueOrDefault(attackerId) + 1;
         _bounty[victimId] = 0;
 

@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="PackedScene" path="res://maps/room/Room.tscn" id="1"]
 [ext_resource type="Script" path="res://core/Main.cs" id="2"]
 [ext_resource type="PackedScene" path="res://core/DebugOverlay.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://core/KillfeedUI.tscn" id="4"]
+[ext_resource type="Script" path="res://ui/GameMenu.cs" id="5"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("2")
@@ -19,3 +20,6 @@ _spawnable_scenes = PackedStringArray("res://player/Player.tscn")
 [node name="DebugOverlay" parent="." instance=ExtResource("3")]
 
 [node name="KillfeedUI" parent="." instance=ExtResource("4")]
+
+[node name="GameMenu" type="CanvasLayer" parent="."]
+script = ExtResource("5")

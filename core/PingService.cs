@@ -29,7 +29,9 @@ public partial class PingService : Node
 
     public override void _Process(double delta)
     {
-        if (!Net.Instance.IsClient)
+        // Not until the connection is actually up: a client joining from the menu sits in
+        // "connecting" for a moment, and RPCs sent then just log "peer not connected" errors.
+        if (!Net.Instance.IsClient || Multiplayer.MultiplayerPeer?.GetConnectionStatus() != MultiplayerPeer.ConnectionStatus.Connected)
             return;
 
         _timeSinceLastPing += delta;

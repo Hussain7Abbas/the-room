@@ -10,4 +10,11 @@
     <PackageReference Include="Chickensoft.GoDotTest" Version="2.0.47" />
     <PackageReference Include="Shouldly" Version="4.3.0" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- services/ holds standalone .NET apps (the lobby). They build on their own and must not be
+         compiled into the game assembly. -->
+    <Compile Remove="services/**" />
+    <Content Remove="services/**" />
+    <None Remove="services/**" />
+  </ItemGroup>
 </Project>
