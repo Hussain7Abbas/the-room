@@ -30,6 +30,15 @@ public partial class MatchServer : Node
     private readonly Dictionary<long, int> _score = new();
     private readonly Dictionary<long, int> _bounty = new();
 
+    // Phase 5 award telemetry (GDD §7 "award titles"). All server-only, all reset in
+    // ResetMatch() alongside score/bounty. Console prints double as the "structured log" this
+    // phase's plan doc explicitly deferred building for real — genuinely enough for now since
+    // nothing consumes it but the end-of-match announcement below.
+    private readonly Dictionary<long, int> _parries = new();
+    private readonly Dictionary<long, int> _heavyWhiffs = new();
+    private readonly Dictionary<long, int> _executesTaken = new(); // died to an execute this match
+    private readonly Dictionary<long, int> _biggestBountyClaimed = new(); // largest single bounty collected in one kill
+
     public bool IsLastCall => _state == MatchState.LastCall;
     public bool IsResults => _state == MatchState.Ended;
     public int GetScore(long peerId) => _score.GetValueOrDefault(peerId);
@@ -122,6 +131,39 @@ public partial class MatchServer : Node
         var mvpName = mvpId >= 0 ? Main.GetPlayerName(mvpId) : "Nobody";
         GD.Print($"[Match] Ended. MVP: {mvpName} ({Mathf.Max(0, mvpScore)} pts).");
         Rpc(nameof(BroadcastAnnouncement), $"MATCH OVER — MVP: {mvpName} ({Mathf.Max(0, mvpScore)} pts)");
+
+        foreach (var award in ComputeAwards())
+            Rpc(nameof(BroadcastAnnouncement), award);
+    }
+
+    /// <summary>GDD §7 "award titles" — computed from this match's telemetry, one line per
+    /// award that actually happened (a stat of 0 doesn't get a title; nobody needs to be told
+    /// they whiffed zero heavies). Real presentation (victory poses, etc.) is Phase 5 art-pass
+    /// territory; this is the systems half.</summary>
+    private List<string> ComputeAwards()
+    {
+        var awards = new List<string>();
+
+        void AddTop(Dictionary<long, int> stat, string title, string suffix)
+        {
+            long bestId = -1;
+            var best = 0;
+            foreach (var (id, v) in stat)
+            {
+                if (v <= best) continue;
+                best = v;
+                bestId = id;
+            }
+            if (bestId >= 0)
+                awards.Add($"{title}: {Main.GetPlayerName(bestId)} ({best} {suffix})");
+        }
+
+        AddTop(_executesTaken, "MOST STABBED IN THE BACK", "times");
+        AddTop(_parries, "SHARPEST REFLEXES", "parries");
+        AddTop(_heavyWhiffs, "ALL BARK, NO BITE", "whiffed heavies");
+        AddTop(_biggestBountyClaimed, "HIGHWAY ROBBERY", "pts in one bounty");
+
+        return awards;
     }
 
     private void ResetMatch()
@@ -131,6 +173,10 @@ public partial class MatchServer : Node
         _matchElapsed = 0;
         _score.Clear();
         _bounty.Clear();
+        _parries.Clear();
+        _heavyWhiffs.Clear();
+        _executesTaken.Clear();
+        _biggestBountyClaimed.Clear();
 
         _knifeState = KnifeState.Respawning;
         _knifeTimer = TuningService.Instance.GoldenKnifeFirstSpawn;
@@ -144,7 +190,7 @@ public partial class MatchServer : Node
 
     /// <summary>Server-only (or offline-solo). Called from Player.ServerApplyDamage's lethal
     /// branch — updates score, bounty, and Golden Knife holder state for one kill.</summary>
-    public void ServerRegisterKill(long attackerId, long victimId)
+    public void ServerRegisterKill(long attackerId, long victimId, string method)
     {
         if (!_isAuthoritative || _state == MatchState.Ended)
             return; // no scoring during the results screen
@@ -160,6 +206,9 @@ public partial class MatchServer : Node
         _bounty[attackerId] = _bounty.GetValueOrDefault(attackerId) + 1;
         _bounty[victimId] = 0;
 
+        if (method == "execute")
+            _executesTaken[victimId] = _executesTaken.GetValueOrDefault(victimId) + 1;
+
         var newBounty = _bounty[attackerId];
         if (newBounty == tuning.BountyAnnounceOnATear)
             Rpc(nameof(BroadcastAnnouncement), $"{Main.GetPlayerName(attackerId)} IS ON A TEAR");
@@ -167,12 +216,34 @@ public partial class MatchServer : Node
             Rpc(nameof(BroadcastAnnouncement), $"{Main.GetPlayerName(attackerId)} IS UNSTOPPABLE ({newBounty})");
 
         if (victimBounty > 0)
+        {
             Rpc(nameof(BroadcastAnnouncement), $"{Main.GetPlayerName(attackerId)} COLLECTED {Main.GetPlayerName(victimId)}'S BOUNTY (+{victimBounty})");
+            if (victimBounty > _biggestBountyClaimed.GetValueOrDefault(attackerId))
+                _biggestBountyClaimed[attackerId] = victimBounty;
+        }
 
         if (IsGoldenKnifeHolder(victimId))
             LoseGoldenKnife();
 
         Rpc(nameof(BroadcastScore), attackerId, _score[attackerId]);
+    }
+
+    /// <summary>Server-only. Player.ResolveMeleeAttack calls this when a parry negates a hit —
+    /// Phase 5 award telemetry ("Sharpest Reflexes").</summary>
+    public void ServerRegisterParry(long defenderId)
+    {
+        if (!_isAuthoritative)
+            return;
+        _parries[defenderId] = _parries.GetValueOrDefault(defenderId) + 1;
+    }
+
+    /// <summary>Server-only. Player.ResolveMeleeAttack calls this when a heavy lands nobody —
+    /// Phase 5 award telemetry ("All Bark, No Bite").</summary>
+    public void ServerRegisterHeavyWhiff(long attackerId)
+    {
+        if (!_isAuthoritative)
+            return;
+        _heavyWhiffs[attackerId] = _heavyWhiffs.GetValueOrDefault(attackerId) + 1;
     }
 
     /// <summary>Server-only. Player.ServerApplyDamage picks between Tuning.RespawnTime and

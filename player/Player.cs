@@ -592,6 +592,8 @@ public partial class Player : CharacterBody3D
 
         if (victimId is not { } vId)
         {
+            if (isHeavy)
+                MatchServer.Instance.ServerRegisterHeavyWhiff(_peerId); // Phase 5 award telemetry ("All Bark No Bite")
             RpcId(_peerId, nameof(ReceiveAttackResult), false, -1L);
             return;
         }
@@ -609,6 +611,7 @@ public partial class Player : CharacterBody3D
             victim._combatState = CombatState.Idle; // consumed — successful parry, no extra cooldown beyond the one already ticking
             _combatState = CombatState.Staggered;
             _stateTimer = tuning.ParryStaggerDuration;
+            MatchServer.Instance.ServerRegisterParry(vId); // Phase 5 award telemetry ("Sharpest Reflexes")
             GD.Print($"[Combat] {Main.GetPlayerName(vId)} parried {Main.GetPlayerName(_peerId)}'s {(isHeavy ? "heavy" : "light")}.");
             RpcId(_peerId, nameof(ReceiveAttackResult), false, vId);
             return;
@@ -693,7 +696,7 @@ public partial class Player : CharacterBody3D
 
         GD.Print($"[Combat] {Main.GetPlayerName(attackerId)} killed {Main.GetPlayerName(_peerId)} ({method}).");
 
-        MatchServer.Instance.ServerRegisterKill(attackerId, _peerId);
+        MatchServer.Instance.ServerRegisterKill(attackerId, _peerId, method);
 
         // Broadcast from the VICTIM node (this) to everyone — killfeed + this player's own
         // death cam trigger on their own client (see BroadcastKill).
