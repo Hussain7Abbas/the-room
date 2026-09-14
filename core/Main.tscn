@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" path="res://core/DebugOverlay.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://core/KillfeedUI.tscn" id="4"]
 [ext_resource type="Script" path="res://ui/GameMenu.cs" id="5"]
+[ext_resource type="Script" path="res://ui/PlayerHud.cs" id="6"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("2")
@@ -23,3 +24,6 @@ _spawnable_scenes = PackedStringArray("res://player/Player.tscn")
 
 [node name="GameMenu" type="CanvasLayer" parent="."]
 script = ExtResource("5")
+
+[node name="PlayerHud" type="CanvasLayer" parent="."]
+script = ExtResource("6")

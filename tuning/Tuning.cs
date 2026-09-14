@@ -35,6 +35,15 @@ public partial class Tuning : Resource
     [ExportGroup("Movement")]
     [Export] public float SprintSpeedMultiplier = 1.6f; // while Shift is held
 
+    // Stamina limits sprint and dodge. Server-authoritative; the owner predicts it (Player.SimulateStep).
+    [ExportGroup("Stamina")]
+    [Export] public float MaxStamina = 100f;
+    [Export] public float SprintStaminaPerSecond = 22f;
+    [Export] public float DodgeStaminaCost = 30f;
+    [Export] public float StaminaRegenPerSecond = 30f;
+    [Export] public float StaminaRegenDelay = 0.8f; // pause after any use before it refills
+    [Export] public float SprintMinStamina = 15f; // after running dry, sprint needs this much back
+
     [ExportGroup("Melee — Execute")]
     [Export] public float ExecuteAnimationLock = 0.6f;
     [Export] public float ExecuteBehindAngleDegrees = 60.0f;

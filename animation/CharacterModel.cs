@@ -141,18 +141,19 @@ public partial class CharacterModel : Node3D
     }
 
     /// <summary>Plays a one-shot clip (attack, dodge, ability, death) stretched or squeezed to
-    /// last <paramref name="duration"/> seconds. Locomotion resumes afterwards. Does nothing if this
-    /// set has no such clip, or if the body is dead.</summary>
-    public void PlayOneShot(Clip clip, float duration)
+    /// last <paramref name="duration"/> seconds. Locomotion resumes afterwards. Returns false (and
+    /// does nothing) if this set has no such clip, or if the body is dead.</summary>
+    public bool PlayOneShot(Clip clip, float duration)
     {
         if (!_animator.HasAnimation(ClipNames[clip]) || (_dead && clip != Clip.Death))
-            return;
+            return false;
         var length = (float)_animator.GetAnimation(ClipNames[clip]).Length;
         _current = clip;
         _animator.SpeedScale = 1f;
         _animator.Play(ClipNames[clip], customBlend: 0.05, customSpeed: duration > 0.01f ? length / duration : 1f);
         _animator.Seek(0, true);
         _oneShotRemaining = duration;
+        return true;
     }
 
     /// <summary>Health hit 0: fall, and stay down until <see cref="Revive"/>.</summary>

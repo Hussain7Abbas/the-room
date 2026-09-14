@@ -13,6 +13,7 @@ Why: character owners control an ability's *shape* in code, and this file contro
 |---|---|
 | Light / Heavy / Execute | `LightWindup`, `LightDamagePercent` (the normal hit), `HeavyDamagePercent` (1.5× light), `HeavyLungeRange`, `ExecuteBehindAngleDegrees` |
 | Dodge & movement | `DodgeDuration`, `DodgeDistance`, `DodgeCooldown`, `SprintSpeedMultiplier` |
+| Stamina | `MaxStamina`, `SprintStaminaPerSecond`, `DodgeStaminaCost`, `StaminaRegenPerSecond`, `StaminaRegenDelay`, `SprintMinStamina` |
 | Health & respawn | `MaxHealth`, `RespawnTime`, `RespawnTimeLastCall`, `SpawnProtectionDuration`, `DeathCamDuration` |
 | Golden Knife & bounty | `GoldenKnifeFirstSpawn`, `GoldenKnifeDuration`, `GoldenKnifeScoreMultiplier`, `BountyAnnounce*` |
 | Match | `ScoreTargetDuelPit`, `ScoreTargetChaos`, `MatchTimeLimitSeconds`, `LastCall*`, `ResultsScreenDurationSeconds` |

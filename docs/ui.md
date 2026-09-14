@@ -28,7 +28,25 @@ Launching with `--server` or `--connect` skips the menu. For screenshots:
 - `--menu-page=history|leaderboard` opens the menu on that page;
 - `--menu-open=settings|controls|about` opens that dialog on top.
 
-## In game (`ui/GameMenu.cs`, part of `core/Main.tscn`, clients only)
+## In game: the HUD (`ui/PlayerHud.cs`, top-left, clients only)
+
+- **Name** in the character's colour, and **HP** as numbers.
+- **Red health bar,** in quarter segments. After a hit a pale **chip** holds for a moment, then
+  slides down to the new value, so damage reads as a chunk falling away. It pulses when health
+  is 30% or lower.
+- **Green stamina bar** under it. Sprinting and dodging spend it, and it turns amber while
+  exhausted.
+- **Ability tile:** the key (E), a dark shade that drains downward as the ability recharges, the
+  seconds left, and a pulsing gold border when it's ready. The ability's name is underneath.
+
+Health and stamina come from the server (`Player.ReceiveServerState`), with stamina predicted
+locally so the bar is smooth. The cooldown starts from the ability's tell. `ui/HudBar.cs` draws the
+bars.
+
+The developer overlay (ping, tick, rewind) moved to the bottom-left. It's shown in debug builds only,
+and **F3** toggles it.
+
+## In game: menus (`ui/GameMenu.cs`, part of `core/Main.tscn`, clients only)
 
 - **Connecting overlay:** "Connecting to <room>…" with Cancel. It gives up after 12 s with a
   clear message.

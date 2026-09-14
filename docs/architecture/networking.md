@@ -19,7 +19,7 @@ this copy plays:
 
 | Role | Runs | Details |
 |---|---|---|
-| **Server** | Authoritative `SimulateStep` with the latest input, the combat state machine, abilities | Broadcasts `ReceiveServerState(tick, position, yaw)` every tick |
+| **Server** | Authoritative `SimulateStep` with the latest input, the combat state machine, abilities | Broadcasts `ReceiveServerState(tick, position, yaw, health, stamina)` every tick |
 | **Owner** (your own player) | `SimulateStep` locally for zero-latency movement, then sends `SubmitInput` | Reconciles against server snapshots |
 | **Remote view** (other players) | No physics | `InterpolateRemote()` renders them `InterpolationDelaySeconds` (0.1 s) in the past, between two snapshots |
 

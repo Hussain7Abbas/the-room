@@ -119,11 +119,28 @@ public partial class Player : CharacterBody3D
     private double _localBusyUntil;
     private bool _serverPendingSprint;
 
+    // Stamina: spent by sprinting and dodging, refills after a short pause. The server's value is
+    // authoritative; the owner runs the same rules as a prediction (SimulateStep) and snaps to the
+    // server's value when they drift apart.
+    private float _stamina;
+    private float _staminaRegenIn;
+    private bool _sprinting;
+    private double _abilityReadyAt; // owner: when the ability comes off cooldown, for the HUD
+
     public bool IsDead => _combatState == CombatState.Dead;
     /// <summary>Mid-roll: strikes pass through (CombatServer skips this player's hitbox).</summary>
     public bool IsDodging => _combatState == CombatState.Dodging;
     public bool IsSpawnProtected => _spawnProtectionRemaining > 0f;
     public float HealthFraction => Mathf.Clamp(_health / Mathf.Max(1f, TuningService.Instance.MaxHealth), 0f, 1f);
+    public float Health => _health;
+    public float StaminaFraction => Mathf.Clamp(_stamina / Mathf.Max(1f, TuningService.Instance.MaxStamina), 0f, 1f);
+    /// <summary>Ran dry and can't sprint until it's back to Tuning.SprintMinStamina.</summary>
+    public bool IsExhausted => !_sprinting && _stamina < TuningService.Instance.SprintMinStamina;
+    /// <summary>Owner only (HUD): seconds until the ability can be used again, 0 when ready.</summary>
+    public float AbilityCooldownRemaining => Mathf.Max(0f, (float)(_abilityReadyAt - Time.GetTicksMsec() / 1000.0));
+    public float AbilityCooldownTotal => _characterDef?.Ability is { UsesCooldown: true } def
+        ? TuningService.Instance.GetAbilityNumber(def.Id, "cooldown", TuningService.Instance.AbilityCooldownMin)
+        : 0f;
 
     // --- bot AI (owning client with --bot; see core/Net.cs) ---
     private Vector2 _botMoveInput;
@@ -173,6 +190,7 @@ public partial class Player : CharacterBody3D
         }
 
         _health = TuningService.Instance.MaxHealth;
+        _stamina = TuningService.Instance.MaxStamina;
         _peerId = long.TryParse(Name, out var parsedId) ? parsedId : GetMultiplayerAuthority();
 
         // MultiplayerSpawner replicates node creation, NOT the multiplayer-authority flag — every
@@ -352,7 +370,9 @@ public partial class Player : CharacterBody3D
         else
         {
             var direction = worldDir.Normalized();
-            var sprintMultiplier = sprint ? TuningService.Instance.SprintSpeedMultiplier : 1f;
+            var sprintMultiplier = UpdateStamina(sprint && direction.LengthSquared() > 0.0001f, (float)delta)
+                ? TuningService.Instance.SprintSpeedMultiplier
+                : 1f;
             var effectiveSpeed = MoveSpeed * sprintMultiplier * _slowMultiplier; // ability shared-kit: Ability.ApplySlow
 
             if (direction.LengthSquared() > 0.0001f)
@@ -393,6 +413,35 @@ public partial class Player : CharacterBody3D
         var worldDir = CameraRelative(ReadMoveInput());
         UpdateFacing(worldDir, (float)delta);
         SimulateStep(worldDir, delta, !GameMenu.IsOpen && Input.IsActionJustPressed("jump"), WantsSprint());
+    }
+
+    /// <summary>Drains stamina while sprinting and refills it otherwise. Returns whether the sprint
+    /// actually happens: once empty, it stays off until stamina is back to SprintMinStamina, so it
+    /// doesn't flicker on and off at zero.</summary>
+    private bool UpdateStamina(bool wantsSprint, float delta)
+    {
+        var tuning = TuningService.Instance;
+        _sprinting = wantsSprint && (_sprinting ? _stamina > 0f : _stamina >= tuning.SprintMinStamina);
+        if (_sprinting)
+        {
+            _stamina = Mathf.Max(0f, _stamina - tuning.SprintStaminaPerSecond * delta);
+            _staminaRegenIn = tuning.StaminaRegenDelay;
+        }
+        else if (_staminaRegenIn > 0f)
+        {
+            _staminaRegenIn -= delta;
+        }
+        else
+        {
+            _stamina = Mathf.Min(tuning.MaxStamina, _stamina + tuning.StaminaRegenPerSecond * delta);
+        }
+        return _sprinting;
+    }
+
+    private void SpendStamina(float amount)
+    {
+        _stamina = Mathf.Max(0f, _stamina - amount);
+        _staminaRegenIn = TuningService.Instance.StaminaRegenDelay;
     }
 
     /// <summary>Shift held, for the local human (bots never sprint).</summary>
@@ -479,7 +528,7 @@ public partial class Player : CharacterBody3D
         _serverJumpQueued = false;
 
         var tick = Engine.GetPhysicsFrames();
-        Rpc(nameof(ReceiveServerState), tick, GlobalPosition, GlobalRotation.Y);
+        Rpc(nameof(ReceiveServerState), tick, GlobalPosition, GlobalRotation.Y, _health, _stamina);
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
@@ -505,13 +554,22 @@ public partial class Player : CharacterBody3D
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
-    private void ReceiveServerState(ulong tick, Vector3 serverPosition, float serverYaw)
+    private void ReceiveServerState(ulong tick, Vector3 serverPosition, float serverYaw, float health, float stamina)
     {
         if (_isServer)
             return;
 
+        // Health only ever lived on the server before, so no client (and no HUD) knew it.
+        _health = health;
+
         if (_isOwner)
+        {
             ReconcileOwner(tick, serverPosition);
+            // Stamina is predicted locally (smooth HUD); the server's value is a round-trip old, so
+            // only take it when the two have really drifted apart.
+            if (Mathf.Abs(stamina - _stamina) > 12f)
+                _stamina = stamina;
+        }
         else if (_isRemoteView)
         {
             var now = Time.GetTicksMsec() / 1000.0;
@@ -588,7 +646,7 @@ public partial class Player : CharacterBody3D
         var now = Time.GetTicksMsec() / 1000.0;
         if (verb == Verb.Dodge)
         {
-            if (IsDead || now < _localDodgeReadyAt || now < _localBusyUntil)
+            if (IsDead || now < _localDodgeReadyAt || now < _localBusyUntil || _stamina < tuning.DodgeStaminaCost)
                 return; // the server would refuse it anyway
             // Roll the way you're moving (camera-relative); standing still, roll the way you face.
             var worldDir = CameraRelative(ReadMoveInput());
@@ -665,6 +723,7 @@ public partial class Player : CharacterBody3D
             case Verb.Dodge:
                 if (_combatState != CombatState.Idle) return; // recovery locks out the escape too — that's what makes whiffing costly
                 if (_dodgeCooldownRemaining > 0f) return;
+                if (_stamina < TuningService.Instance.DodgeStaminaCost) return;
                 var dodgeTuning = TuningService.Instance;
                 _dodgeCooldownRemaining = dodgeTuning.DodgeDuration + dodgeTuning.DodgeCooldown;
                 _combatState = CombatState.Dodging;
@@ -682,6 +741,7 @@ public partial class Player : CharacterBody3D
         var forward = -GlobalTransform.Basis.Z.Normalized();
         _dodgeVelocity = forward * (tuning.DodgeDistance / Mathf.Max(0.01f, tuning.DodgeDuration));
         _dodgeTimeRemaining = tuning.DodgeDuration;
+        SpendStamina(tuning.DodgeStaminaCost);
 
         if (predicted)
             PlayDodgeAnimation(); // your own roll shows at once; the server's cue is ignored for you
@@ -1012,6 +1072,7 @@ public partial class Player : CharacterBody3D
             return;
 
         _health = TuningService.Instance.MaxHealth;
+        _stamina = TuningService.Instance.MaxStamina;
         _combatState = CombatState.Idle;
         Velocity = Vector3.Zero;
 
@@ -1030,6 +1091,7 @@ public partial class Player : CharacterBody3D
         if (!_isServer && Multiplayer.GetRemoteSenderId() != 1)
             return;
         _model?.Revive();
+        _stamina = TuningService.Instance.MaxStamina;
     }
 
     /// <summary>Server-only. Called by MatchServer at the start of every new match: resets
@@ -1284,21 +1346,28 @@ public partial class Player : CharacterBody3D
     /// nothing here replicates automatically.</summary>
     public void BroadcastAbilityTell(string abilityId, float tellSeconds)
     {
-        if (!_isServer)
-            return;
-        Rpc(nameof(ReceiveAbilityTell), tellSeconds);
+        if (_isOffline)
+            ReceiveAbilityTell(tellSeconds); // practice: no server to broadcast it
+        else if (_isServer)
+            Rpc(nameof(ReceiveAbilityTell), tellSeconds);
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
     private void ReceiveAbilityTell(float tellSeconds)
     {
-        if (!_isServer && Multiplayer.GetRemoteSenderId() != 1)
+        if (!_isServer && !_isOffline && Multiplayer.GetRemoteSenderId() != 1)
             return;
-        _abilityTellRemaining = tellSeconds;
-        // Characters whose animation set has an Ability clip (Zain's drop kick) act it out; its
-        // slice is timed so the hit lands as the tell ends.
-        if (_model is not null && _modelAnimations is not null)
-            _model.PlayOneShot(CharacterModel.Clip.Ability, _modelAnimations.AbilityDuration);
+
+        // A character whose animation set has an Ability clip (Zain's drop kick) acts it out, and
+        // the animation is the tell: no colour flash on top. Its slice is timed so the hit lands
+        // as the tell ends. Abilities without an animation still flash.
+        var actedOut = _model is not null && _modelAnimations is not null
+            && _model.PlayOneShot(CharacterModel.Clip.Ability, _modelAnimations.AbilityDuration);
+        if (!actedOut)
+            _abilityTellRemaining = tellSeconds;
+
+        if (_isOwner)
+            _abilityReadyAt = Time.GetTicksMsec() / 1000.0 + tellSeconds + AbilityCooldownTotal;
     }
     private float _abilityTellRemaining;
 

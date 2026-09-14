@@ -32,6 +32,11 @@
   (`StartDodge(predicted: true)`) and the server runs it for real. `IsDodging` hides the hitbox
   in `CombatServer`. There is no parry and no dash any more.
 - **Sprint** is Shift held, sent every tick in `SubmitInput` and applied in `SimulateStep`.
+- **Stamina** (`UpdateStamina`, `SpendStamina`) gates sprint and dodge. It runs in `SimulateStep`,
+  on the server (authoritative) and on the owner (predicted). `ReceiveServerState` carries health
+  and stamina; the owner snaps its stamina only when it drifts by more than 12.
+- An ability whose character has an `Ability` clip acts it out instead of flashing
+  (`ReceiveAbilityTell`). The owner's cooldown for the HUD also starts there.
 - Combat state (`_combatState`) is **server-only**. Clients learn about it only through
   broadcasts (`BroadcastKill`, `BroadcastAttackCue`, `ReceiveAbilityTell`, …).
 - Visuals:

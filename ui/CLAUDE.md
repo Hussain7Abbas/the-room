@@ -22,6 +22,10 @@
   from the InputMap, with layout-aware key names). `AboutDialog.cs` has the description,
   © Voidra Team and the org link. Both open from the main menu, and Settings also opens from the
   Esc menu.
+- `PlayerHud.cs` + `HudBar.cs` (in `core/Main.tscn`): the top-left HUD with health (and the
+  damage chip), stamina and the ability cooldown tile. It reads `Player.HealthFraction`,
+  `StaminaFraction`, `IsExhausted` and `AbilityCooldownRemaining/Total`. The top-left is the HUD's;
+  the debug overlay lives bottom-left (debug builds, F3).
 - `PaginationBar.cs`: reusable pager. It raises `PageRequested(page, size)`; call `SetPage` with
   what the server returned.
 

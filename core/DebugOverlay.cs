@@ -7,8 +7,8 @@ namespace TheRoom.Core;
 /// <summary>
 /// Phase 1 network-spike HUD (see plan/phase-1-network-spike.md "Debug overlay" task): ping,
 /// tick, and predicted-vs-confirmed stab counts, so a playtest can actually measure the
-/// prediction/rewind approach instead of just eyeballing it. Always-on for now — a toggle key
-/// can be added later if it gets in the way.
+/// prediction/rewind approach instead of just eyeballing it. Bottom-left (the player HUD owns the
+/// top-left), shown in debug builds only, F3 toggles it.
 /// </summary>
 public partial class DebugOverlay : CanvasLayer
 {
@@ -19,6 +19,14 @@ public partial class DebugOverlay : CanvasLayer
     public override void _Ready()
     {
         _label = GetNode<Label>("Label");
+        _label.AddThemeFontSizeOverride("font_size", 13);
+        Visible = OS.IsDebugBuild();
+    }
+
+    public override void _UnhandledInput(InputEvent @event)
+    {
+        if (@event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.F3 })
+            Visible = !Visible;
     }
 
     public override void _Process(double delta)

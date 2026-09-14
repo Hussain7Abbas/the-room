@@ -15,7 +15,7 @@
 
 ```
 0.00s  input: Zain faces where the camera aims
-0.00s  tell: crouch and leap (drop-kick animation) + cyan flash
+0.00s  tell: crouch and leap (the drop-kick animation is the tell; no colour flash)
 0.45s  effect: lunges up to 3.5 m straight ahead (stops at walls/players), then both feet hit the
        first player within 1.8 m: 2× a light hit (70 damage) + stagger
 ~1.0s  lands and gets up (animation only)

@@ -19,7 +19,7 @@ Every ability follows: **input → tell (≥ 0.3 s, visible) → effect → end 
 
 | Character | Ability | Slot | Effect | Cooldown |
 |---|---|---|---|---|
-| `zain` | **Drop Kick** | Burst (damage, weak: movement) | After a 0.45 s leap (the drop-kick animation plus a cyan flash), lunges up to 3.5 m and both feet hit whoever is straight ahead for **2× a light hit** (70), with a stagger. Dodgeable. | 14 s |
+| `zain` | **Drop Kick** | Burst (damage, weak: movement) | After a 0.45 s leap (the drop-kick animation is the tell; there's no colour flash), lunges up to 3.5 m and both feet hit whoever is straight ahead for **2× a light hit** (70), with a stagger. Dodgeable. | 14 s |
 | `firepatch` | Fire Patch | Zone Denial | After a 0.3 s tell, throws an 8 m arc and leaves a 2.5 m zone dealing 20 damage/s for 4 s | 18 s |
 
 Zain is the team's own character: the model every character uses, and the drop kick the team
@@ -29,7 +29,8 @@ replace it rather than build on it. (The Blink example was removed.)
 
 An ability can be acted out by the character: give the character its own `HumanoidAnimationSet`
 with an `Ability` clip (see `assets/characters/zain/zain_animations.tres`). It plays on the
-tell, sliced so the strike lands as the tell ends.
+tell, sliced so the strike lands as the tell ends, and **replaces the colour flash**. Abilities
+without an animation (Fire Patch) still flash.
 
 ## Adding an ability
 

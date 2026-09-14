@@ -101,4 +101,11 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
   - The panorama skybox is added at run time on clients only, because the server has no imported textures.
   - Verified: sprint 9.6 m/s and roll 3.62 m measured. A networked bot match had 20 kills, 7 drop-kick hits for 70 each, deaths and kicks seen in frames, and 0 server errors. Tests: 12 game, 9 lobby.
 - 2026-09-14 — **Blink removed** (user request). Zain's Drop Kick is the default ability. The characters are now Zain and the Fire Patch placeholder. A saved Blink pick falls back to Zain, and old match history still reads "Blink".
+- 2026-09-14 — **HUD, stamina, no kick flash.**
+  - Top-left HUD: name, HP, a red health bar with a trailing damage chip, a green stamina bar (amber when exhausted), and the ability tile with a cooldown shade, seconds and a gold READY border.
+  - Stamina gates sprint (22/s) and dodge (30 each); it's server-authoritative and owner-predicted.
+  - Clients now learn health from the server (they never did before; the debug HP was always 100%).
+  - An ability with its own animation no longer flashes (Zain's kick), and practice now gets ability tells.
+  - The debug overlay moved bottom-left (debug builds only, F3).
+  - Verified: HUD frames from a networked match and stamina measured offline.
 

@@ -15,11 +15,21 @@ asks to use a verb. The numbers below are the current values in `tuning/tuning.t
 | **Heavy lunge** | Right mouse | 0.4 s windup (a visible tell), then lunges up to 3 m and hits for **52.5% health, 1.5× a light hit**. Staggers the victim 0.4 s. 0.6 s recovery, which is the punish window when it whiffs. |
 | **Execute** | Heavy from behind | A heavy that lands within 60° of the victim's back kills instantly. 0.6 s lock. |
 | **Dodge (roll)** | Cmd (Mac) / Ctrl | A 3.5 m roll in 0.55 s, in the direction you're moving (or facing, if standing still). **Strikes pass through you for the whole roll**: your hitbox is hidden, so a swing can still hit someone behind you. 1.2 s cooldown after the roll. Only from idle, so you can't roll out of your own attack's recovery. |
-| **Sprint** | Shift (hold) | Move speed ×1.6 (6 → 9.6 m/s) while held. |
+| **Sprint** | Shift (hold) | Move speed ×1.6 (6 → 9.6 m/s) while held. Costs stamina. |
 | **Jump** | Space | A small hop (about 0.8 m). Turn it off with `HopEnabled` for playtests. |
 | **Ability** | E | One per character, see [Abilities](abilities.md). Zain's Drop Kick hits for 2× a light hit. |
 
 There is **no parry**: the dodge replaced it (decision D7 in `plan/main.md`).
+
+**Stamina** (the green bar) limits both:
+
+- sprint drains 22/s, about 4.5 s from full;
+- a dodge costs 30 and is refused without enough;
+- it refills at 30/s after a 0.8 s pause;
+- once it runs dry you can't sprint again until it's back to 15, so the sprint doesn't flicker
+  at empty.
+
+The server tracks it, and your screen predicts it.
 
 Health is 100. You respawn after 1.5 s (1.0 s during Last Call), with 1.5 s of spawn protection
 (a pulsing pale shimmer; the texture stays visible). The server starts and cancels it and tells
