@@ -131,6 +131,9 @@ public partial class Player : CharacterBody3D
     public override void _Ready()
     {
         _springArm = GetNode<SpringArm3D>(SpringArmPath);
+        // The exported NameLabel was never assigned in Player.tscn, so SetDisplayName() silently
+        // did nothing from Phase 0 until the first time anyone actually looked at a rendered frame.
+        NameLabel ??= GetNodeOrNull<Label3D>("NameLabel");
         _meshInstance = GetNodeOrNull<MeshInstance3D>(MeshPath);
         if (_meshInstance?.GetActiveMaterial(0) is StandardMaterial3D baseMat)
         {
@@ -160,6 +163,12 @@ public partial class Player : CharacterBody3D
         {
             var camera = _springArm.GetNodeOrNull<Camera3D>("Camera3D");
             camera?.MakeCurrent();
+
+            // You don't need to read your own name — and when the spring arm pulls the camera in
+            // against a wall, your own label sits right in front of the lens (seen in a real
+            // rendered frame, not guessed).
+            if (NameLabel is not null)
+                NameLabel.Visible = false;
             PickNewBotTarget();
 
             if (!_isBot)
@@ -183,6 +192,14 @@ public partial class Player : CharacterBody3D
         else if (_isOwner)
         {
             RpcId(1, nameof(AnnounceIdentity), Net.Instance.LocalPlayerName, Net.Instance.ChosenCharacterId ?? "");
+        }
+        else if (_isRemoteView)
+        {
+            // Late-join fix: the server's ReceiveIdentity broadcast only fires once, when each
+            // player announces — anyone who connects *afterwards* never heard it and would show
+            // every earlier player with the default colour/name forever. Asking from this node's
+            // own _Ready guarantees the node already exists on this client when the reply lands.
+            RpcId(1, nameof(RequestIdentity));
         }
     }
 
@@ -313,11 +330,15 @@ public partial class Player : CharacterBody3D
         MoveAndSlide();
 
         // Safety net: rescue anyone who ends up below the arena instead of free-falling forever.
-        // Grey-box collision (CSG use_collision under Jolt) has shown occasional flakiness in
-        // testing — this catches that symptom regardless of root cause, and is a reasonable
-        // permanent "void" feature for any map anyway.
+        // Root cause of the Phase 1 "some players fall through the floor" flake, found by
+        // rendering real frames: spawn markers sat at Y=0 (floor level), so every capsule spawned
+        // half-inside the floor's CSG trimesh collider, which Jolt can depenetrate either way.
+        // Markers are now at Y=1 (maps/room/Room.tscn). This stays as a permanent "void"
+        // feature for any map, and logs so falls are countable in headless tests.
         if (GlobalPosition.Y < TuningService.Instance.VoidCatchY)
         {
+            if (_isServer)
+                GD.Print($"[Physics] {Main.GetPlayerName(_peerId)} fell out of the world — rescued.");
             var spawn = Main.PickRandomSpawn();
             if (spawn is not null)
                 GlobalPosition = spawn.GlobalPosition;
@@ -789,6 +810,18 @@ public partial class Player : CharacterBody3D
             return;
 
         ApplyIdentity(name, characterId);
+    }
+
+    /// <summary>Server-only: a late-joining client's copy of this node asking who it is. If the
+    /// owner hasn't announced yet, stay silent — the normal broadcast will reach the asker too,
+    /// since its copy of this node now exists.</summary>
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void RequestIdentity()
+    {
+        if (!_isServer || string.IsNullOrEmpty(_displayName))
+            return;
+
+        RpcId(Multiplayer.GetRemoteSenderId(), nameof(ReceiveIdentity), _displayName, _characterDef?.Id ?? "");
     }
 
     private void ApplyIdentity(string name, string? characterId)
