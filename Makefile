@@ -26,11 +26,19 @@ PORT    ?= 60010
 HOST    ?= 127.0.0.1
 N       ?= 2
 
+# VPS deploy target (see plan/phase-1-network-spike.md). SSH host is an alias from ~/.ssh/config;
+# app runs isolated under its own system user/service, never as part of DEPLOY_HOST's other apps.
+DEPLOY_HOST ?= kios-chat
+DEPLOY_PATH ?= /opt/the-room/app
+DEPLOY_USER ?= theroom
+DEPLOY_SERVICE ?= the-room-server.service
+
 .PHONY: help \
 	install setup \
 	build run-server run-client run-local run-bots \
 	clean \
 	test \
+	deploy-server deploy-logs deploy-status \
 	export-server export-client
 
 ## ------------------------------------------------------------------------
@@ -58,6 +66,9 @@ help:
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "test" "TODO — no test framework wired yet, see plan/phase-0-foundation.md"
 	@echo ""
 	@echo "$(BLUE)Deploy$(RESET)"
+	@printf "  $(GREEN)%-14s$(RESET) %s\n" "deploy-server" "rsync + rebuild + restart the dedicated server on $(DEPLOY_HOST) ($(YELLOW)systemd: $(DEPLOY_SERVICE)$(RESET))"
+	@printf "  $(GREEN)%-14s$(RESET) %s\n" "deploy-status" "Show the deployed server's systemd status"
+	@printf "  $(GREEN)%-14s$(RESET) %s\n" "deploy-logs" "Tail the deployed server's journal"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "export-server" "TODO — needs export_presets.cfg (Linux headless server template)"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "export-client" "TODO — needs export_presets.cfg (Windows client template)"
 
@@ -130,6 +141,25 @@ test:
 ## ------------------------------------------------------------------------
 ## Deploy
 ## ------------------------------------------------------------------------
+
+deploy-server:
+	@echo "$(GREEN)Syncing to $(DEPLOY_HOST):$(DEPLOY_PATH)...$(RESET)"
+	@rsync -az --delete \
+		--exclude '.git' --exclude '.godot' --exclude 'bin' --exclude 'obj' \
+		"$(ROOT)/" "$(DEPLOY_HOST):$(DEPLOY_PATH)/"
+	@echo "$(GREEN)Rebuilding on $(DEPLOY_HOST)...$(RESET)"
+	@ssh "$(DEPLOY_HOST)" '\
+		chown -R $(DEPLOY_USER):$(DEPLOY_USER) "$(DEPLOY_PATH)" && \
+		sudo -u $(DEPLOY_USER) bash -c "export PATH=/opt/the-room/dotnet:\$$PATH; cd $(DEPLOY_PATH) && dotnet build \"The Room.sln\""'
+	@echo "$(GREEN)Restarting $(DEPLOY_SERVICE)...$(RESET)"
+	@ssh "$(DEPLOY_HOST)" "systemctl restart $(DEPLOY_SERVICE) && sleep 2 && systemctl is-active $(DEPLOY_SERVICE)"
+	@echo "$(GREEN)Deployed.$(RESET) make deploy-status / deploy-logs to check on it."
+
+deploy-status:
+	@ssh "$(DEPLOY_HOST)" "systemctl status $(DEPLOY_SERVICE) --no-pager -l"
+
+deploy-logs:
+	@ssh "$(DEPLOY_HOST)" "journalctl -u $(DEPLOY_SERVICE) -n 100 --no-pager"
 
 export-server:
 	@echo "$(YELLOW)No export_presets.cfg yet.$(RESET) Add a 'Linux/X11' headless server preset in the Godot editor" \

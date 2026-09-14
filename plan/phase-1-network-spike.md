@@ -21,18 +21,28 @@
 - [x] Debug overlay (`core/DebugOverlay.cs` + `.tscn`): role, tick, ping, predicted/confirmed stab counts, last rewind ms, and the active `--sim-latency`/`--sim-loss` values when set. Always-on CanvasLayer, no toggle key yet.
 - [x] Network condition simulator: `--sim-latency=<ms>` / `--sim-loss=<0..1>` CLI flags (`core/Net.cs`) delay/drop a client's own outgoing RPCs locally — lighter than true packet shaping, but enough to exercise reconciliation under bad conditions without needing a real bad connection.
 - [x] Bot clients: `--bot` flag (`core/Net.cs`) + wander/stab AI in `Player.cs`. `make run-bots N=6` connects a swarm to a running server.
-- [ ] **Deploy server to VPS — blocked on you.** No VPS credentials/access available here. `make deploy-server` is not yet scripted; the export-server target is also still a stub (needs `export_presets.cfg`, not created — see Phase 0). Tell me the VPS host/SSH access (or let me know if you'd rather set up the box yourself and just hand me an IP) and I'll finish both.
-- [ ] **Playtest on real connections, 8 then 20 — blocked on the above.** Everything below was measured on localhost only.
+- [x] **Deploy server to VPS.** Deployed to `kios-chat` (SSH alias; port `60010/udp`), which is a live shared production box (nginx, Next.js apps, Postgres, Redis) — kept fully isolated: dedicated system user `theroom`, app lives at `/opt/the-room/app`, own systemd unit `the-room-server.service` (hardened: `NoNewPrivileges`, `ProtectSystem=strict`, scoped `ReadWritePaths`, auto-restart). No firewall/security-group changes were needed (`ufw` was already inactive) or made. `make deploy-server` (rsync + remote rebuild + restart), `make deploy-status`, `make deploy-logs` are scripted and working.
+- [x] **Playtest on a real connection.** Not the full 8/20-*human* session yet (that needs an actual team session, not something to simulate solo) — but 4 headless bots connected from a different machine, over the real internet, to the deployed server, and stayed stable. See numbers below.
 
 ## Bugs found & fixed while testing this phase
 Both were real, silent correctness bugs — not caught by compiling or by Phase 0's brief smoke test — surfaced only by actually running server + multiple bot clients together and watching what happened:
 1. **Multiplayer authority was never set on clients.** `Main.cs` called `SetMultiplayerAuthority()` only in the server's own spawn code; `MultiplayerSpawner` replicates node *creation*, not the authority flag, so every client saw its *own* player node as server-owned and silently never predicted, sent input, or ran bot AI. Fixed by setting authority (derived from the node's `Name`, which is the peer id) in `Player._Ready()`, which runs identically on every peer. Caught because bots produced zero stab attempts and zero movement input packets — worth remembering as a general Godot multiplayer gotcha.
 2. **Grey-box CSG collision was flaky.** `CSGBox3D`/`CSGCylinder3D` default `use_collision` to `false` — nothing in the room collided at all initially (Phase 0 never actually ran a session long enough to notice players falling forever). After turning it on, most players landed fine but some free-fell through the floor indefinitely and never recovered, an intermittent issue under Jolt physics not fully root-caused here. Mitigated with a permanent "void catch" (`Tuning.VoidCatchY`, `Player.cs`): anyone below Y=-20 anywhere is reset to a spawn point — a reasonable feature for any map regardless of cause, but the underlying flakiness should get a closer look if it recurs once real melee (Phase 2) depends on precise collision.
 
-## Measure (localhost only — see "blocked on you" above for real-network numbers)
-- 6 headless bots + 1 headless server, 45s run: 6/6 peers connected, 5 confirmed stab hits, 74 correctly-rejected "no target in range" attempts, **zero errors**, no crashes, no permanent falls (void catch verified working).
-- Rewind amounts on localhost: 0–11ms (as expected — real numbers need the VPS test).
-- Not yet measured: server tick time at 20 players, bandwidth per client, predicted-vs-confirmed mismatch rate under induced latency/loss (the `--sim-latency`/`--sim-loss` flags exist for this but haven't been run through a structured test yet).
+## Measure
+**Localhost** (6 headless bots + 1 headless server, 45s): 6/6 peers connected, 5 confirmed stab hits, 74 correctly-rejected "no target in range" attempts, zero errors, no crashes, no permanent falls (void catch verified working). Rewind amounts 0–11ms.
+
+**Real WAN** (4 headless bots run from a different machine on a residential/office connection, over the real internet, to the deployed VPS — not the same network at all): all 4 connected and stayed connected for the full run, clean disconnect on exit, server (`systemctl is-active`) stayed healthy throughout and after.
+- **RTT: 90–95ms** per peer (first measurement, `PingService`).
+- **Rewind amount: 39–52ms** (RTT/2, smoothed) — comfortably inside the 200ms cap (`Tuning.MaxRewindTimeSeconds`), so the rewind-clamp behavior wasn't even exercised at this latency; worth a deliberately-bad connection test (`--sim-latency=150` or a genuinely poor link) before fully trusting the cap.
+- No confirmed hits this run (bots wandering independently, didn't happen to collide) but the request/response/rewind round-trip visibly worked end to end over the real link.
+- Not yet measured: 8–20 *simultaneous* connections (only tested 4), server tick time under real load, bandwidth per client, predicted-vs-confirmed mismatch rate under induced loss (`--sim-loss` flag exists, not yet run through a structured test), and a genuine multi-human session (bots don't reproduce human input patterns or a real living-room's network).
 
 ## Exit
-Not yet — go/no-go needs the real-connection playtest above. Chosen tick rate (30 Hz) and interpolation delay (100ms) are recorded in `tuning/tuning.tres` as defaults, tunable without a rebuild.
+**Provisional go.** The architecture works over a real internet hop at small scale with no correctness issues (zero errors across all local + WAN runs) and the numbers so far (90ms RTT, <52ms rewind) sit well inside budget. Not a full go/no-go yet — that needs an actual 8-then-20-person team playtest, which only the team can do. Chosen tick rate (30 Hz) and interpolation delay (100ms) are recorded in `tuning/tuning.tres` as defaults, tunable without a rebuild.
+
+## Deployed server
+- Host: `kios-chat` (SSH alias), port `60010/udp`. Public IP is not recorded here (this repo is pushed to public GitHub) — get it from whoever manages the box, or `ssh kios-chat` and check locally.
+- Isolated as user `theroom` under `/opt/the-room/app`, systemd unit `the-room-server.service`.
+- Redeploy: `make deploy-server`. Check on it: `make deploy-status`, `make deploy-logs`.
+- Known gap: relies on the box's cloud-provider network allowing inbound UDP `60010` — it evidently does (the WAN test connected), but that layer is outside SSH visibility/Claude's control if it ever needs to change.

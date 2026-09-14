@@ -65,7 +65,11 @@ public partial class PingService : Node
         if (!Net.Instance.IsServer)
             return;
 
-        _peerRttMs[Multiplayer.GetRemoteSenderId()] = rttMs;
+        var peerId = Multiplayer.GetRemoteSenderId();
+        if (!_peerRttMs.ContainsKey(peerId))
+            GD.Print($"[PingService] First RTT measurement for peer {peerId}: {rttMs:F0}ms.");
+
+        _peerRttMs[peerId] = rttMs;
     }
 
     /// <summary>Server-side helper: this peer's estimated one-way latency in seconds (RTT/2), or 0 if unknown.</summary>
