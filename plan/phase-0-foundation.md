@@ -26,7 +26,7 @@
 - [x] `Main.tscn`/`Main.cs`: spawns a `Player` per connected peer via `MultiplayerSpawner` (auto-replicates to clients, no manual spawn RPCs needed), cycling through the room's spawn markers. Works offline (spawns local peer 1 immediately) and networked.
 - [x] Makefile (via `makefile-standards`): `help`, `install`, `setup`, `build`, `run-server`, `run-client`, `run-local N=<count>`, `clean`, `test` (stub), `export-server`/`export-client`. Verified: `make -n help`, `make help`, `make build`, `make run-server` all run clean.
   - `export-server`/`export-client` were originally stubs (no `export_presets.cfg`); finished later (see `plan/main.md`'s changelog) — real Linux/Windows export templates installed, `export_presets.cfg` hand-written and validated by actually exporting, and the resulting standalone Linux server binary was uploaded and run on the real VPS with a real client connecting to it, not just tested via `godot --path .` from source.
-- [ ] **Test framework — deferred.** gdUnit4 (C# support) needs both an editor addon and a NuGet package; GoDotTest is NuGet-only but still needs a Godot-aware host to run against `GodotSharp`. Neither is a small add given the current scope — picking this up properly belongs in Phase 1 alongside the debug/telemetry tooling, rather than wiring something half-usable now. `make test` exists as a stub that says so.
+- [x] **Test framework.** Finished later (see `plan/main.md`'s changelog) with `Chickensoft.GoDotTest` (NuGet-only, no editor addon needed) — `tests/TestRunner.cs`/`.tscn` + two test classes, run via `make test`. Found and fixed the exact same `OS.GetCmdlineArgs()` vs `GetCmdlineUserArgs()` gotcha as `core/Net.cs` while wiring it up (GoDotTest's own `--run-tests`/`--quit-on-finish` flags were silently never being seen), and verified a deliberately-broken test actually produces a non-zero exit code, not just that a passing run looks fine.
 
 ## Verification done
 - `dotnet build "The Room.sln"` — 0 errors, 0 warnings.
@@ -35,7 +35,7 @@
 - `make help` renders correctly with colorized, grouped sections.
 
 ## Deliverables
-Runnable project, tuning file, Makefile, folder structure, README with run commands. **All done** except the test framework (see above — carried to Phase 1).
+Runnable project, tuning file, Makefile, folder structure, README with run commands, test framework. **All done.**
 
 ## Out of scope
 Any combat, any art, any ability. (Player can currently only walk and look around — no verbs yet.)

@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Chickensoft.GoDotTest" Version="2.0.47" />
+    <PackageReference Include="Shouldly" Version="4.3.0" />
+  </ItemGroup>
 </Project>

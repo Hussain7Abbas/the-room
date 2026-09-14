@@ -65,7 +65,7 @@ help:
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "clean" "Remove build/editor caches ($(YELLOW).godot/mono, bin, obj$(RESET))"
 	@echo ""
 	@echo "$(BLUE)Test$(RESET)"
-	@printf "  $(GREEN)%-14s$(RESET) %s\n" "test" "TODO — no test framework wired yet, see plan/phase-0-foundation.md"
+	@printf "  $(GREEN)%-14s$(RESET) %s\n" "test" "Run the C# test suite ($(YELLOW)Chickensoft.GoDotTest$(RESET), tests/)"
 	@echo ""
 	@echo "$(BLUE)Deploy$(RESET)"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "deploy-server" "rsync + rebuild + restart the dedicated server on $(DEPLOY_HOST) ($(YELLOW)systemd: $(DEPLOY_SERVICE)$(RESET))"
@@ -136,9 +136,8 @@ clean:
 ## Test
 ## ------------------------------------------------------------------------
 
-test:
-	@echo "$(YELLOW)No test framework wired yet.$(RESET) See plan/phase-0-foundation.md — deferred pending gdUnit4/GoDotTest setup."
-	@exit 1
+test: build
+	@cd "$(ROOT)" && "$(GODOT)" --headless --path . tests/TestRunner.tscn -- --run-tests --quit-on-finish
 
 ## ------------------------------------------------------------------------
 ## Deploy
