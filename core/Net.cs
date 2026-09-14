@@ -18,6 +18,8 @@ namespace TheRoom.Core;
 ///   --character=&lt;id&gt;     which character to play (see abilities/CharacterRegistry.cs); no
 ///                        character-select UI yet (Phase 3 deferred it), defaults to whichever
 ///                        character is first in the registry if omitted or unknown
+///   --config=&lt;duelpit|chaos&gt;  server only: which score target to use (see core/MatchServer.cs);
+///                        no lobby/config-select UI yet (Phase 4 deferred it), defaults to duelpit
 ///
 /// With none of these flags, the game runs OFFLINE (no MultiplayerPeer at all) so a single
 /// person can open the editor and just look at the room/player — useful for quick iteration.
@@ -35,6 +37,7 @@ public partial class Net : Node
     public bool IsBot { get; private set; }
     public string LocalPlayerName { get; private set; } = "Player";
     public string? ChosenCharacterId { get; private set; }
+    public bool IsChaosConfig { get; private set; }
 
     /// <summary>Artificial one-way delay (seconds) applied to this client's own outgoing RPCs. 0 = off.</summary>
     public float SimLatencySeconds { get; private set; }
@@ -82,6 +85,7 @@ public partial class Net : Node
         ChosenCharacterId = args.TryGetValue("character", out var characterId) && !string.IsNullOrWhiteSpace(characterId)
             ? characterId
             : null;
+        IsChaosConfig = args.TryGetValue("config", out var configName) && configName.Equals("chaos", System.StringComparison.OrdinalIgnoreCase);
 
         if (args.TryGetValue("sim-latency", out var latencyStr) && float.TryParse(latencyStr, out var latencyMs))
             SimLatencySeconds = Mathf.Max(0f, latencyMs) / 1000f;

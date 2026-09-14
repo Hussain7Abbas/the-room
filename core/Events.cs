@@ -21,8 +21,9 @@ public partial class Events : Node
     /// method is one of "light" | "heavy" | "execute" (Phase 2 grey-box verbs).</summary>
     [Signal] public delegate void PlayerKilledEventHandler(long killerId, long victimId, string method);
 
-    // Populated from Phase 3 onward:
-    // AbilityUsed, BountyAnnounced, GoldenKnifePickedUp, LastCallStarted, MatchEnded...
+    /// <summary>Emitted locally on every client on receiving core/MatchServer.cs's announcement
+    /// broadcast — Last Call, bounty callouts, Golden Knife pickup/loss, match results.</summary>
+    [Signal] public delegate void MatchAnnouncementEventHandler(string text);
 
     public override void _Ready()
     {

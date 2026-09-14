@@ -63,7 +63,12 @@ public partial class Tuning : Resource
     [Export] public int ScoreTargetChaos = 40;
     [Export] public float MatchTimeLimitSeconds = 480.0f; // 8 min
     [Export] public float LastCallThresholdPercent = 0.75f;
+    [Export] public float LastCallTimeRemainingSeconds = 90.0f; // also enter Last Call inside this much time left, so a timer-ended match still climaxes
+    [Export] public float ResultsScreenDurationSeconds = 8.0f;
     [Export] public float DeathCamDuration = 1.5f;
+
+    [ExportGroup("Golden Knife pickup")]
+    [Export] public float GoldenKnifePickupRadius = 2.5f;
 
     [ExportGroup("Ability grammar — hard rules (CHARACTER-SPEC.md Part 1)")]
     [Export] public float MinAbilityTellTime = 0.3f;

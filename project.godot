@@ -22,6 +22,7 @@ Tuning="*res://core/TuningService.cs"
 Net="*res://core/Net.cs"
 PingService="*res://core/PingService.cs"
 CombatServer="*res://core/CombatServer.cs"
+MatchServer="*res://core/MatchServer.cs"
 
 [display]
 

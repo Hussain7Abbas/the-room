@@ -642,6 +642,16 @@ public partial class Player : CharacterBody3D
             _combatState = CombatState.Executing;
             _stateTimer = tuning.ExecuteAnimationLock; // "suicidal in a crowd" — you're locked and exposed right after
         }
+        else if (MatchServer.Instance.IsGoldenKnifeHolder(_peerId))
+        {
+            // GDD §5.4: holder deals one-hit kills for the whole duration, on light or heavy.
+            victim.ServerApplyDamage(victim._health, _peerId, "golden knife");
+            if (isHeavy && !victim.IsDead)
+            {
+                victim._combatState = CombatState.Staggered;
+                victim._stateTimer = tuning.HeavyStaggerDuration;
+            }
+        }
         else
         {
             var damage = tuning.MaxHealth * (isHeavy ? tuning.HeavyDamagePercent : tuning.LightDamagePercent);
@@ -683,11 +693,15 @@ public partial class Player : CharacterBody3D
 
         GD.Print($"[Combat] {Main.GetPlayerName(attackerId)} killed {Main.GetPlayerName(_peerId)} ({method}).");
 
+        MatchServer.Instance.ServerRegisterKill(attackerId, _peerId);
+
         // Broadcast from the VICTIM node (this) to everyone — killfeed + this player's own
         // death cam trigger on their own client (see BroadcastKill).
         Rpc(nameof(BroadcastKill), attackerId, _peerId, method, GlobalPosition);
 
-        GetTree().CreateTimer(TuningService.Instance.RespawnTime).Timeout += ServerRespawn;
+        // Last Call (GDD §5.6) drops respawn to 1s so the closing arena stays a real climax
+        // instead of a slow trickle back in.
+        GetTree().CreateTimer(MatchServer.Instance.CurrentRespawnTime).Timeout += ServerRespawn;
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -719,6 +733,28 @@ public partial class Player : CharacterBody3D
         _health = TuningService.Instance.MaxHealth;
         _combatState = CombatState.Idle;
         Velocity = Vector3.Zero;
+
+        var spawn = Main.PickRandomSpawn();
+        if (spawn is not null)
+            GlobalPosition = spawn.GlobalPosition;
+
+        _spawnProtectionRemaining = TuningService.Instance.SpawnProtectionDuration;
+    }
+
+    /// <summary>Server-only. Called by MatchServer at the start of every new match: resets
+    /// health/state/position regardless of current state (unlike ServerRespawn, which only
+    /// fires from a death timer and requires IsDead).</summary>
+    public void ServerMatchReset()
+    {
+        if (!_isServer)
+            return;
+
+        _health = TuningService.Instance.MaxHealth;
+        _combatState = CombatState.Idle;
+        Velocity = Vector3.Zero;
+        _slowMultiplier = 1f;
+        _slowTimeRemaining = 0f;
+        _revealRemaining = 0f;
 
         var spawn = Main.PickRandomSpawn();
         if (spawn is not null)
