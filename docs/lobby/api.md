@@ -73,7 +73,7 @@ To join, connect to `host:port` over UDP. The menu does that with `Net.Join`.
     { "id": 42, "roomCode": "MAIN", "roomName": "The Room", "mode": "duelpit",
       "endedAt": "2026-09-14T15:30:01Z", "durationSeconds": 480,
       "mvpName": "Ana", "mvpScore": 25, "playerCount": 8,
-      "topPlayers": [ { "rank": 1, "name": "Ana", "character": "blink", "score": 25, "kills": 19, "deaths": 6 } ] }
+      "topPlayers": [ { "rank": 1, "name": "Ana", "character": "zain", "score": 25, "kills": 19, "deaths": 6 } ] }
   ],
   "page": 1, "pageSize": 10, "totalItems": 137, "totalPages": 14
 }

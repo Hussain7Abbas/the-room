@@ -100,4 +100,5 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
   - **Zain** is a playable character (default) with **Drop Kick**: a 0.45 s leap, then 2× a light hit, dodgeable, acted out by the drop-kick clip. Clip slices were chosen from renders, and the new shared-kit `Strike` is used.
   - The panorama skybox is added at run time on clients only, because the server has no imported textures.
   - Verified: sprint 9.6 m/s and roll 3.62 m measured. A networked bot match had 20 kills, 7 drop-kick hits for 70 each, deaths and kicks seen in frames, and 0 server errors. Tests: 12 game, 9 lobby.
+- 2026-09-14 — **Blink removed** (user request). Zain's Drop Kick is the default ability. The characters are now Zain and the Fire Patch placeholder. A saved Blink pick falls back to Zain, and old match history still reads "Blink".
 

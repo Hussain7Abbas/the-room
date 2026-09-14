@@ -25,7 +25,7 @@ public class TuningTests : TestClass
     public void GetAbilityNumberReturnsStoredValueWhenPresent()
     {
         var tuning = new Tuning();
-        tuning.AbilityNumbers["blink.range"] = 6f;
-        tuning.GetAbilityNumber("blink", "range", -1f).ShouldBe(6f);
+        tuning.AbilityNumbers["dropkick.range"] = 6f;
+        tuning.GetAbilityNumber("dropkick", "range", -1f).ShouldBe(6f);
     }
 }

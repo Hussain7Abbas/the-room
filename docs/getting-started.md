@@ -52,7 +52,7 @@ between Maximized (the default), Windowed and Fullscreen.
 Godot's own flags come first; the game's flags go **after a literal `--`**:
 
 ```bash
-godot --path . -- --connect=room-udp.iscoded.com --port=60010 --name=Ana --character=blink
+godot --path . -- --connect=room-udp.iscoded.com --port=60010 --name=Ana --character=zain
 ```
 
 | Flag | Used by | Meaning |
@@ -61,7 +61,7 @@ godot --path . -- --connect=room-udp.iscoded.com --port=60010 --name=Ana --chara
 | `--connect=<host>` | client | Join directly, skipping the menu. |
 | `--port=<n>` | both | Port to listen on or connect to (default 60010). |
 | `--name=<name>` | client | Display name (the menu's name field overrides it). |
-| `--character=<id>` | client | `zain` (default), `blink` or `firepatch` (see `abilities/CharacterRegistry.cs`). |
+| `--character=<id>` | client | `zain` (default) or `firepatch` (see `abilities/CharacterRegistry.cs`). |
 | `--bot` | client | Headless AI player (wander, attack, use ability). Quits when its session ends. |
 | `--sim-latency=<ms>`, `--sim-loss=<0..1>` | client | Delay or drop this client's own outgoing RPCs (testing only). |
 | `--config=duelpit\|chaos` | server | Score target (25 or 40, from tuning). |

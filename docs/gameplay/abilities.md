@@ -20,13 +20,12 @@ Every ability follows: **input → tell (≥ 0.3 s, visible) → effect → end 
 | Character | Ability | Slot | Effect | Cooldown |
 |---|---|---|---|---|
 | `zain` | **Drop Kick** | Burst (damage, weak: movement) | After a 0.45 s leap (the drop-kick animation plus a cyan flash), lunges up to 3.5 m and both feet hit whoever is straight ahead for **2× a light hit** (70), with a stagger. Dodgeable. | 14 s |
-| `blink` | Blink | Mobility | After a 0.3 s blue flash, sweeps up to 6 m forward, stopping at walls and players | 14 s |
 | `firepatch` | Fire Patch | Zone Denial | After a 0.3 s tell, throws an 8 m arc and leaves a 2.5 m zone dealing 20 damage/s for 4 s | 18 s |
 
 Zain is the team's own character: the model every character uses, and the drop kick the team
-designed. `blink` and `firepatch` are **placeholder examples** written to prove the framework. Per
-Pillar 3 a real character must be designed by the developer it caricatures, so replace those two
-rather than build on them.
+designed, and the default pick. `firepatch` is a **placeholder example** written to prove the
+framework. Per Pillar 3 a real character must be designed by the developer it caricatures, so
+replace it rather than build on it. (The Blink example was removed.)
 
 An ability can be acted out by the character: give the character its own `HumanoidAnimationSet`
 with an `Ability` clip (see `assets/characters/zain/zain_animations.tres`). It plays on the

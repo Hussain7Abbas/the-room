@@ -54,9 +54,6 @@ VoidCatchY = -20.0
 HopEnabled = true
 HopImpulse = 4.0
 AbilityNumbers = {
-"blink.tell_seconds": 0.3,
-"blink.cooldown": 14.0,
-"blink.range": 6.0,
 "firepatch.tell_seconds": 0.3,
 "firepatch.cooldown": 18.0,
 "firepatch.range": 8.0,

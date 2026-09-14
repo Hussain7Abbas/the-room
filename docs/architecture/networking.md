@@ -75,7 +75,7 @@ So you hit what you saw on your screen, within the cap.
 
 ## Moves that displace a player
 
-The heavy lunge and Blink use `Player.ServerSweep(motion)`: a `MoveAndSlide` in chunks of 0.4 m
+The heavy lunge and Drop Kick use `Player.ServerSweep(motion)`: a `MoveAndSlide` in chunks of 0.4 m
 or less, stopping when blocked. It never teleports. Teleports and single long sweeps were measured
 to leave players inside geometry, and `MoveAndCollide` stopped on the floor contact and barely
 moved.

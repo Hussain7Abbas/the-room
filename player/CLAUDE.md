@@ -19,7 +19,7 @@
 ## Rules
 
 - **Movement goes through `SimulateStep`**, the step shared by server, owner and offline.
-  Displacing moves (heavy lunge, Blink, Drop Kick) use `ServerSweep`, never a raw
+  Displacing moves (heavy lunge, Drop Kick) use `ServerSweep`, never a raw
   `GlobalPosition =`. Teleports end up inside geometry.
 - **Camera and body turn separately.** The mouse changes `_cameraYaw` (the pivot is pinned to it);
   `UpdateFacing` turns the body toward the move direction; `FaceAim()` + the aim lock face the

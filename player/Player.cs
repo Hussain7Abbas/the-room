@@ -752,8 +752,8 @@ public partial class Player : CharacterBody3D
 
     /// <summary>Server-only: move this capsule by `motion` in a single physics step, sliding along
     /// the floor and stopping at walls, pillars and other players. Used by the heavy lunge and by
-    /// Blink. Both originally used MoveAndCollide, which — on a capsule resting on the floor —
-    /// reports the floor itself as the first collision and moves 0m (measured: every Blink
+    /// abilities (Drop Kick). The lunge originally used MoveAndCollide, which — on a capsule resting on the floor —
+    /// reports the floor itself as the first collision and moves 0m (measured: every ability lunge
     /// travelled "0.0m of 6.0m"). MoveAndSlide handles floor contact correctly.
     /// Must be called from inside _PhysicsProcess (MoveAndSlide uses the physics delta).</summary>
     public float ServerSweep(Vector3 motion)
@@ -1232,7 +1232,6 @@ public partial class Player : CharacterBody3D
 
     private static Ability? CreateAbility(AbilityDef? def, Player caster) => def?.Id switch
     {
-        "blink" => new BlinkAbility(def, caster),
         "firepatch" => new FirePatchAbility(def, caster),
         "dropkick" => new DropKickAbility(def, caster),
         _ => null,
@@ -1249,7 +1248,7 @@ public partial class Player : CharacterBody3D
             return;
 
         _spawnProtectionRemaining = 0f; // cancelled instantly on any deliberate action, same as the melee verbs
-        FaceAim(); // abilities aim with the camera too (Blink goes where you look)
+        FaceAim(); // abilities aim with the camera too (the drop kick goes where you look)
 
         if (_isOffline)
         {

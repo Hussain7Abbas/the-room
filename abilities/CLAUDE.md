@@ -11,8 +11,8 @@
   numbers live in `tuning.tres` → `AbilityNumbers` (`"<abilityId>.<param>"`).
 - `CharacterDef` also carries `Model`, `Animations` and `TintModel` (see `animation/`).
 - `CharacterRegistry.cs`: every playable character, built in C#. **`zain`** (Drop Kick) is the
-  team's own character and the default pick. **`blink` and `firepatch` are placeholder examples
-  written by Claude, not real submissions.** Replace them, don't build on them.
+  team's own character and the default pick. **`firepatch` is a placeholder example written by
+  Claude, not a real submission.** Replace it, don't build on it. (Blink was removed on 2026-09-14.)
   - Load character assets **by path** (`AnimationsPath`), never with `GD.Load` in the registry.
     It runs on the headless server, which has no imported FBX files.
 - `AbilityValidator.cs`: runs on every boot and in tests. Flags slot collisions, bad cooldowns,

@@ -92,7 +92,7 @@ public partial class Tuning : Resource
     [Export] public float HopImpulse = 4.0f;
 
     /// <summary>
-    /// Per-ability numbers, keyed "&lt;abilityId&gt;.&lt;paramName&gt;" (e.g. "blink.range",
+    /// Per-ability numbers, keyed "&lt;abilityId&gt;.&lt;paramName&gt;" (e.g. "dropkick.range",
     /// "firepatch.damage_per_tick"). CHARACTER-SPEC.md Part 4: ability owners control an
     /// ability's *shape* in code (abilities/&lt;id&gt;/*.cs); every number it uses lives here
     /// instead, so the single tuning-file owner can rebalance without touching an owner's code.

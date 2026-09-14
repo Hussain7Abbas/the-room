@@ -23,7 +23,7 @@ public sealed class DropKickAbility : Ability
         var radius = tuning.GetAbilityNumber(Def.Id, "hit_radius", 1.2f);
         var damage = tuning.MaxHealth * tuning.LightDamagePercent * tuning.GetAbilityNumber(Def.Id, "damage_multiplier", 2f);
 
-        // Same sweep as the heavy lunge and Blink: slides, stops at walls and players, never teleports.
+        // Same sweep as the heavy lunge: slides, stops at walls and players, never teleports.
         var forward = -Caster.GlobalTransform.Basis.Z.Normalized();
         var travelled = Caster.ServerSweep(forward * range);
         var hit = Strike(reach, radius, damage, staggers: true);
