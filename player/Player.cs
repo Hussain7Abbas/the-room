@@ -64,6 +64,9 @@ public partial class Player : CharacterBody3D
     // --- server-authoritative input, latest received from the owning client (server only) ---
     private Vector2 _serverPendingInput;
     private float _serverPendingYaw;
+    private int _jumpCounter;            // owner: total jump presses so far
+    private int _serverLastJumpCounter;  // server: highest count seen from the owner
+    private bool _serverJumpQueued;
 
     // --- remote entity interpolation (remote-view clients only) ---
     private readonly List<RemoteSnapshot> _remoteSnapshots = new();
@@ -291,13 +294,13 @@ public partial class Player : CharacterBody3D
     // Movement — shared step function, three different drivers
     // ------------------------------------------------------------------
 
-    private void SimulateStep(Vector2 inputDir, double delta)
+    private void SimulateStep(Vector2 inputDir, double delta, bool jump = false)
     {
         var velocity = Velocity;
 
         if (!IsOnFloor())
             velocity.Y -= (float)ProjectSettings.GetSetting("physics/3d/default_gravity") * (float)delta;
-        else if (TuningService.Instance.HopEnabled && WantsHop())
+        else if (jump && TuningService.Instance.HopEnabled)
             velocity.Y = TuningService.Instance.HopImpulse;
 
         if (_dashTimeRemaining > 0f)
@@ -346,19 +349,20 @@ public partial class Player : CharacterBody3D
         }
     }
 
-    private bool WantsHop() => _isBot ? false : Input.IsActionJustPressed("jump");
-
     private void RunOfflinePhysics(double delta)
     {
         if (IsDead) return;
         var inputDir = Input.GetVector("move_left", "move_right", "move_forward", "move_back");
-        SimulateStep(inputDir, delta);
+        SimulateStep(inputDir, delta, Input.IsActionJustPressed("jump"));
     }
 
     private void RunPredictedPhysics(double delta)
     {
         var inputDir = _isBot ? _botMoveInput : Input.GetVector("move_left", "move_right", "move_forward", "move_back");
-        SimulateStep(inputDir, delta);
+        var jump = !_isBot && !IsDead && Input.IsActionJustPressed("jump");
+        if (jump)
+            _jumpCounter++;
+        SimulateStep(inputDir, delta, jump);
 
         var tick = Engine.GetPhysicsFrames();
         _predictedHistory.Add(new PredictedState(tick, GlobalPosition));
@@ -367,7 +371,8 @@ public partial class Player : CharacterBody3D
             _predictedHistory.RemoveAt(0);
 
         var yaw = GlobalRotation.Y;
-        Net.Instance.SendWithSimulation(() => RpcId(1, nameof(SubmitInput), tick, inputDir, yaw));
+        var jumpCounter = _jumpCounter;
+        Net.Instance.SendWithSimulation(() => RpcId(1, nameof(SubmitInput), tick, inputDir, yaw, jumpCounter));
     }
 
     private void RunServerPhysics(double delta)
@@ -376,7 +381,8 @@ public partial class Player : CharacterBody3D
             GlobalRotation = new Vector3(GlobalRotation.X, _serverPendingYaw, GlobalRotation.Z);
 
         if (!IsDead)
-            SimulateStep(_serverPendingInput, delta);
+            SimulateStep(_serverPendingInput, delta, _serverJumpQueued);
+        _serverJumpQueued = false;
 
         var tick = Engine.GetPhysicsFrames();
         Rpc(nameof(ReceiveServerState), tick, GlobalPosition, GlobalRotation.Y);
@@ -386,7 +392,7 @@ public partial class Player : CharacterBody3D
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
-    private void SubmitInput(ulong tick, Vector2 inputDir, float yaw)
+    private void SubmitInput(ulong tick, Vector2 inputDir, float yaw, int jumpCounter)
     {
         if (!_isServer)
             return;
@@ -395,6 +401,15 @@ public partial class Player : CharacterBody3D
 
         _serverPendingInput = inputDir;
         _serverPendingYaw = yaw;
+
+        // Jumps travel as a running count, not a one-tick "pressed" flag: input packets are
+        // unreliable, and a dropped flag would silently eat the jump. Every later packet still
+        // carries the higher count, so the server catches up on the next one that arrives.
+        if (jumpCounter > _serverLastJumpCounter)
+        {
+            _serverLastJumpCounter = jumpCounter;
+            _serverJumpQueued = true;
+        }
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]

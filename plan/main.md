@@ -36,7 +36,7 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
 | D2 | **3D, third-person camera** | Confirmed | Over-the-shoulder / third-person rig, not top-down. Camera collision + readability at 20 players still has to be tuned in Phase 2. |
 | D3 | **Ragdolls** | Build **procedural primitive ragdolls** (capsule/sphere `PhysicalBone3D` rig via Jolt) instead of a downloaded asset for grey-box (Phase 2). Revisit a real skinned-mesh ragdoll only at the Phase 5 art pass, and only from a clearly-licensed free asset the user picks — not auto-downloaded. | Avoids pulling in unvetted third-party assets/licenses sight-unseen; grey-box phase shouldn't depend on art anyway. |
 | D4 | **Networking stack** | Godot high-level multiplayer over **ENet**, dedicated headless server on a **VPS** | Resolves the GDD §12 Steam question: free, self-hosted. |
-| D5 | **Jump / hop** | Build no-jump first; A/B a low hop in Phase 2 | GDD §5.1 leaves it `TBD`. |
+| D5 | **Jump / hop** | ~~Build no-jump first~~ → **jump on Space, on by default** (user request after first play, 2026-09-14). Dash moved to Shift. | GDD §5.1 leaves it `TBD`; `Tuning.HopEnabled` still turns it off for an A/B. |
 | D6 | Git | Done — repo already initialized by the user, `origin` = `github.com/Hussain7Abbas/the-room`, one commit (`init`). | Tuning file must be version-controlled per GDD §9. |
 
 ## Change log

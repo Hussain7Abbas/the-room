@@ -53,7 +53,7 @@ PingIntervalSeconds = 1.0
 ReconciliationSnapDistance = 1.5
 ReconciliationSmoothTime = 0.12
 VoidCatchY = -20.0
-HopEnabled = false
+HopEnabled = true
 HopImpulse = 4.0
 AbilityNumbers = {
 "blink.tell_seconds": 0.3,
