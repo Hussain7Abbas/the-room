@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Godot;
+using TheRoom.Effects;
 using TheRoom.Entities;
 
 namespace TheRoom.Core;
@@ -100,6 +101,7 @@ public partial class MatchServer : Node
     {
         _sessionActive = false;
         SetKnifeVisual(false);
+        SetHolderBeam(-1);
         ClearMatchState();
     }
 
@@ -119,6 +121,7 @@ public partial class MatchServer : Node
         _knifeState = KnifeState.Respawning;
         _knifeTimer = TuningService.Instance.GoldenKnifeFirstSpawn;
         _knifeHolderId = -1;
+        SetHolderBeam(-1);
     }
 
     private double _clockSyncTimer;
@@ -397,6 +400,7 @@ public partial class MatchServer : Node
                     _knifeState = KnifeState.Held;
                     _knifeHolderId = player.PeerId;
                     _knifeTimer = TuningService.Instance.GoldenKnifeDuration;
+                    Rpc(nameof(BroadcastKnifeHolder), player.PeerId);
                     Rpc(nameof(BroadcastAnnouncement), $"{Main.GetPlayerName(player.PeerId)} TOOK THE GOLDEN KNIFE");
                     break;
                 }
@@ -415,6 +419,7 @@ public partial class MatchServer : Node
         _knifeState = KnifeState.Respawning;
         _knifeHolderId = -1;
         _knifeTimer = TuningService.Instance.GoldenKnifeRespawnDelay;
+        Rpc(nameof(BroadcastKnifeHolder), -1L);
         Rpc(nameof(BroadcastAnnouncement), "THE GOLDEN KNIFE WAS LOST");
     }
 
@@ -470,6 +475,32 @@ public partial class MatchServer : Node
         else if (text.Contains("TOOK THE GOLDEN KNIFE") || text.Contains("GOLDEN KNIFE WAS LOST")) SetKnifeVisual(false);
 
         Events.Instance.EmitSignal(Events.SignalName.MatchAnnouncement, text);
+    }
+
+    /// <summary>Who holds the Golden Knife (-1: nobody). Every client puts the gold beam
+    /// (effects/GoldenBeam) on that player, so the whole room can see the holder from anywhere.</summary>
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void BroadcastKnifeHolder(long holderId)
+    {
+        if (!_isAuthoritative && Multiplayer.GetRemoteSenderId() != 1)
+            return;
+        SetHolderBeam(holderId);
+    }
+
+    private Node3D? _holderBeam;
+
+    private void SetHolderBeam(long holderId)
+    {
+        if (_holderBeam is not null && IsInstanceValid(_holderBeam))
+            _holderBeam.QueueFree();
+        _holderBeam = null;
+        if (holderId < 0 || DisplayServer.GetName() == "headless")
+            return;
+        var root = ((SceneTree)Engine.GetMainLoop()).CurrentScene;
+        if (root?.GetNodeOrNull<Node3D>($"PlayersContainer/{holderId}") is not { } holder)
+            return;
+        _holderBeam = new GoldenBeam { Name = "GoldenBeam" };
+        holder.AddChild(_holderBeam);
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]

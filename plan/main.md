@@ -129,3 +129,7 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
   - `core/GameAudio` autoload: Music/Effects buses, quiet looping music (EmptyCity by yd, CC0), sound effects by name (Kenney CC0: stab, swing, jump, land, step, roll, kick, death, menu click). Settings → Sound: Main/Music/Effects.
   - `effects/Fx`: blood spray + floor drop decals that vanish after 3 s; dust puffs for jump, landing (scaled by fall speed), sprint steps, roll trail, drop kick (Kenney Particle Pack, CC0).
   - Settings → Graphics: Texture Quality Low/Mid/High (default Mid): mipmap bias + anisotropic filtering.
+- 2026-09-15 — Golden Knife beam, controller menus, new screenshots:
+  - The holder gets a gold light column into the sky + glow + sparks on every client (`effects/GoldenBeam`, `MatchServer.BroadcastKnifeHolder`); Golden Knife announcements show in gold.
+  - Controller menus: A/Cross presses the focused button inside dialogs (the focus used to stay on the menu behind a newly opened dialog, so A seemed to do nothing), focus is trapped in the top dialog, lists follow the focus and scroll when down goes nowhere.
+  - README/docs images re-rendered on the new arena (gameplay with the beam, menu, Settings → Controls).

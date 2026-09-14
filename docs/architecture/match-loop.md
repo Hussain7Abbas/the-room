@@ -26,7 +26,11 @@ Every kill goes through `MatchServer.ServerRegisterKill(attacker, victim, method
 - **Bounty:** each kill raises your bounty by 1, and dying resets it. Streaks of 3, 5 and 8 are
   announced ("IS ON A TEAR", "UNSTOPPABLE").
 - **Golden Knife:** it appears in the centre after 45 s. Picking it up makes every hit a one-hit
-  kill for 20 s. You lose it on death, and it respawns 30 s later.
+  kill for 20 s. You lose it on death, and it respawns 30 s later. While someone holds it, a
+  column of gold light rises from them into the sky (`effects/GoldenBeam`), visible to everyone
+  from anywhere on the map, and "NAME TOOK THE GOLDEN KNIFE" is announced on screen in gold. The
+  server sends the holder with `MatchServer.BroadcastKnifeHolder` (-1 when it's lost or a new
+  match starts); each client attaches the beam to that player.
 - **Kills and deaths** are counted per player for the match report.
 - Last Call shortens respawns to `RespawnTimeLastCall`.
 

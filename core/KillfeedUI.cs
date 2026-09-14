@@ -99,6 +99,8 @@ public partial class KillfeedUI : CanvasLayer
     private void OnMatchAnnouncement(string text)
     {
         _announcementLabel.Text = text;
+        // Golden Knife news in gold, so "X TOOK THE GOLDEN KNIFE" stands out from streaks and kills.
+        _announcementLabel.Modulate = text.Contains("GOLDEN KNIFE") ? new Color(1f, 0.8f, 0.25f) : Colors.White;
         _announcementLabel.Visible = true;
         _announcementExpiresAt = Time.GetTicksMsec() / 1000.0 + AnnouncementLifetime;
     }

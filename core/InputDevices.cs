@@ -1,5 +1,7 @@
 using System;
+using System.Linq;
 using Godot;
+using TheRoom.UI;
 
 namespace TheRoom.Core;
 
@@ -29,7 +31,28 @@ public partial class InputDevices : Node
     {
         ProcessMode = ProcessModeEnum.Always;
         InputBindings.ApplySaved();
+        EnsurePadMenuActions();
         GetTree().NodeAdded += OnNodeAdded;
+    }
+
+    /// <summary>A/Cross presses the focused button and B/Circle backs out, on every platform. They
+    /// are in Godot's defaults, but only as "any device" events that some pads' drivers miss; adding
+    /// them for each connected pad too means menus never ignore the face buttons.</summary>
+    private static void EnsurePadMenuActions()
+    {
+        void Ensure(string action, JoyButton button)
+        {
+            var bound = InputMap.ActionGetEvents(action)
+                .Any(e => e is InputEventJoypadButton b && b.ButtonIndex == button && b.Device == -1);
+            if (!bound)
+                InputMap.ActionAddEvent(action, new InputEventJoypadButton { ButtonIndex = button, Device = -1 });
+        }
+        Ensure("ui_accept", JoyButton.A);
+        Ensure("ui_cancel", JoyButton.B);
+        Ensure("ui_up", JoyButton.DpadUp);
+        Ensure("ui_down", JoyButton.DpadDown);
+        Ensure("ui_left", JoyButton.DpadLeft);
+        Ensure("ui_right", JoyButton.DpadRight);
     }
 
     public override void _Input(InputEvent @event)
@@ -46,6 +69,104 @@ public partial class InputDevices : Node
         };
         if (next is { } device && device != Current)
             SetCurrent(device, @event.Device);
+
+        if (IsGamepad && Input.MouseMode != Input.MouseModeEnum.Captured)
+        {
+            var down = @event.IsActionPressed("ui_down");
+            var vertical = down || @event.IsActionPressed("ui_up");
+            if ((vertical || @event.IsActionPressed("ui_left") || @event.IsActionPressed("ui_right"))
+                && Time.GetTicksMsec() - _lastNudge > 90)
+            {
+                _lastNudge = Time.GetTicksMsec();
+                var before = GetViewport().GuiGetFocusOwner();
+                Callable.From(() => AfterNavigate(before, vertical, down)).CallDeferred();
+            }
+        }
+    }
+
+    /// <summary>After a D-pad/stick move. Godot picks the next control by position, which in a
+    /// dialog can jump to the menu behind it, or go nowhere (the dialog's "Close" has nothing
+    /// directly below it). Then: stay in the dialog and step to the next control in reading
+    /// order; at the very end, scroll the list so rows below the last button come into view.</summary>
+    private void AfterNavigate(Control? before, bool vertical, bool down)
+    {
+        if (before is null || !IsInstanceValid(before))
+            return;
+        var now = GetViewport().GuiGetFocusOwner();
+        var top = TopModal();
+        var escaped = top is not null && top.IsAncestorOf(before) && (now is null || !top.IsAncestorOf(now));
+        if (!escaped && now != before)
+            return; // a normal move
+        if (!vertical)
+        {
+            if (escaped)
+                before.GrabFocus();
+            return;
+        }
+        var scope = (Node?)top ?? before.GetParent();
+        if (top is not null && StepInReadingOrder(top, before, down) is { } next)
+        {
+            next.GrabFocus();
+            return;
+        }
+        if (escaped)
+            before.GrabFocus();
+        NudgeScroll(before, down, scope);
+    }
+
+    private static Control? StepInReadingOrder(Node scope, Control from, bool forward)
+    {
+        var list = new System.Collections.Generic.List<Control>();
+        foreach (var node in scope.FindChildren("*", "Control", true, false))
+        {
+            if (node is Control c && c.FocusMode == Control.FocusModeEnum.All && c.IsVisibleInTree()
+                && !(c is BaseButton { Disabled: true }))
+                list.Add(c);
+        }
+        var index = list.IndexOf(from);
+        if (index < 0)
+            return null;
+        var target = index + (forward ? 1 : -1);
+        return target >= 0 && target < list.Count ? list[target] : null;
+    }
+
+    private ModalDialog? TopModal()
+    {
+        ModalDialog? top = null;
+        foreach (var node in GetTree().Root.FindChildren("*", "Control", true, false))
+        {
+            if (node is ModalDialog modal && modal.IsVisibleInTree() && !modal.IsQueuedForDeletion())
+                top = modal; // later in tree order means drawn on top
+        }
+        return top;
+    }
+
+    private ulong _lastNudge;
+
+    /// <summary>After up/down: if the focus didn't move (nothing focusable further that way) but
+    /// its scroll area has more content, scroll it, so rows below the last button (and plain rows
+    /// with nothing to press) can still be brought into view with the pad.</summary>
+    private static void NudgeScroll(Control before, bool down, Node? scope)
+    {
+        if (!IsInstanceValid(before))
+            return;
+        ScrollContainer? scroll = null;
+        for (Node? n = before.GetParent(); n is not null && scroll is null; n = n.GetParent())
+            scroll = n as ScrollContainer;
+        // The focus may be outside the list (a dialog's Close button): use the dialog's list.
+        if (scroll is null && scope is not null)
+        {
+            foreach (var node in scope.FindChildren("*", "ScrollContainer", true, false))
+            {
+                if (node is ScrollContainer candidate && candidate.IsVisibleInTree())
+                {
+                    scroll = candidate;
+                    break;
+                }
+            }
+        }
+        if (scroll is not null)
+            scroll.ScrollVertical += down ? 120 : -120;
     }
 
     public override void _Process(double delta)
@@ -55,9 +176,12 @@ public partial class InputDevices : Node
         _focusCheckIn -= delta;
         if (_focusCheckIn > 0)
             return;
-        _focusCheckIn = 0.2; // dialogs open and close under us; re-home the focus when it's lost
+        _focusCheckIn = 0.1; // dialogs open and close under us; re-home the focus when it's lost
         var focused = GetViewport().GuiGetFocusOwner();
-        if (focused is null || !focused.IsVisibleInTree())
+        var top = TopModal();
+        // A dialog that just opened over a menu: the focus is still on the menu's button behind it
+        // (the pause menu's "Settings", the main menu's "Refresh"). Move it into the dialog.
+        if (focused is null || !focused.IsVisibleInTree() || (top is not null && !top.IsAncestorOf(focused)))
             FocusFirstButton();
     }
 
@@ -100,17 +224,14 @@ public partial class InputDevices : Node
             button.FocusMode = IsGamepad ? Control.FocusModeEnum.All : Control.FocusModeEnum.None;
         else if (node is Slider slider) // Settings → Sound: left/right on the D-pad moves it
             slider.FocusMode = IsGamepad ? Control.FocusModeEnum.All : Control.FocusModeEnum.None;
+        else if (node is ScrollContainer scroll)
+            scroll.FollowFocus = true; // moving the focus with the pad scrolls it into view
     }
 
     /// <summary>Focuses the first button of the top-most open dialog, or of the screen.</summary>
     private void FocusFirstButton()
     {
-        Node scope = GetTree().Root;
-        foreach (var dialog in GetTree().Root.FindChildren("*", "Control", true, false))
-        {
-            if (dialog is UI.ModalDialog { Visible: true } modal && modal.IsVisibleInTree())
-                scope = modal; // later in tree order means drawn on top
-        }
+        Node scope = (Node?)TopModal() ?? GetTree().Root;
         foreach (var node in scope.FindChildren("*", "Button", true, false))
         {
             if (node is Button { Disabled: false } button && button.IsVisibleInTree()

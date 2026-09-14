@@ -49,4 +49,8 @@
   focusable and keeps something focused, so screens need no per-screen gamepad code. Buttons
   stay `FocusMode.None` for the mouse (no focus rings). Open/close with `pause_menu` (Esc or
   Start), never `ui_cancel` alone: the pad's B is also the dodge.
+- Pad navigation (`InputDevices`): the focus is kept inside the top-most `ModalDialog` (it moves
+  there when a dialog opens, and a move that would leave it steps in reading order instead);
+  `ScrollContainer`s follow the focus; a down/up that goes nowhere scrolls the list. Test with a
+  driver that sends `InputEventJoypadButton`s (docs/testing.md).
 - The default font lacks many symbols (▶ ★ ●). Stick to Latin plus `• · « » ‹ › —`.

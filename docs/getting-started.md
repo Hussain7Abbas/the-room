@@ -49,7 +49,9 @@ Your character faces the way you move, and turns to the camera when you attack.
 **Controllers:** plug in (or pair) an Xbox or PlayStation controller and press any button. The
 game switches to it, and menus and the HUD show that controller's button icons; press a key or
 click to switch back. The menus work with the D-pad or stick and A / Cross. Other controllers
-work too and show Xbox icons.
+work too and show Xbox icons. In menus, the D-pad or left stick moves between buttons, A / Cross
+presses and B / Circle backs out; the focus stays inside an open dialog, and pressing down on
+the last button of a long page (Settings → Controls) scrolls the rest into view.
 
 The same list is in the game under **Settings → Controls**, where you can **rebind** it: the tab
 shows the device you're using, so rebinding with the keyboard changes keyboard keys and with a
