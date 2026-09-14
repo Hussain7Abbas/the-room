@@ -35,4 +35,22 @@ public class CameraRigTests : TestClass
             player.Free();
         }
     }
+
+    /// <summary>Regression: the body turns to face where it moves (it used to stay locked to the
+    /// camera, so walking back or sideways slid the character backwards/sideways).</summary>
+    [Test]
+    public void BodyYawFacesTheMoveDirection()
+    {
+        TheRoom.Entities.Player.YawFacing(Vector3.Forward).ShouldBe(0f, 0.0001f);
+        Mathf.Abs(TheRoom.Entities.Player.YawFacing(Vector3.Back)).ShouldBe(Mathf.Pi, 0.0001f);
+        TheRoom.Entities.Player.YawFacing(Vector3.Right).ShouldBe(-Mathf.Pi / 2f, 0.0001f);
+        TheRoom.Entities.Player.YawFacing(Vector3.Left).ShouldBe(Mathf.Pi / 2f, 0.0001f);
+
+        // And the yaw really points -Z (the body's forward) along the direction.
+        foreach (var dir in new[] { Vector3.Back, Vector3.Right, new Vector3(1, 0, 1).Normalized() })
+        {
+            var forward = new Basis(Vector3.Up, TheRoom.Entities.Player.YawFacing(dir)) * Vector3.Forward;
+            forward.DistanceTo(dir).ShouldBeLessThan(0.0001f);
+        }
+    }
 }

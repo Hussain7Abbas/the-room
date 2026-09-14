@@ -5,7 +5,7 @@
 **Gate:** a new team member can clone → open in Godot 4.7 → press one button (or `make run-local`) and see two capsules in the same room.
 
 ## Tasks
-- [x] Git — already initialized by the user (`origin` = `github.com/Hussain7Abbas/the-room`).
+- [x] Git — already initialized by the user (`origin` was `github.com/Hussain7Abbas/the-room`; now `github.com/Voidra-iq/the-room`).
 - [x] Language confirmed: **C#**. `.NET SDK 10.0.401` at `/usr/local/share/dotnet` (not on default PATH — Makefile adds it). Godot.NET.Sdk pinned to `4.7.2`, TFM `net8.0`. `The Room.sln` / `The Room.csproj` created and building clean.
 - [x] Folder layout (created so far; `combat/`, `abilities/`, `characters/`, `match/`, `ui/` are still empty — Phase 2/3 territory):
   ```

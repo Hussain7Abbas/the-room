@@ -37,9 +37,28 @@ for tick T, it compares it with its own prediction for T:
 SubmitInput(ulong tick, Vector2 moveDir, float yaw, int jumpCounter)
 ```
 
+- `moveDir` is the wanted direction **in world space** (x, z). The owner turns WASD into it
+  relative to its camera. The server clamps it to length 1.
+- `yaw` is the **body's** facing. It isn't the camera's: see "Camera and facing" below.
+
 One-shot actions travel as **counters**, not "pressed this tick" flags. The packet is unreliable,
 so a dropped flag would lose the jump; the next packet still carries the higher count. The
 server jumps when the counter goes up.
+
+## Camera and facing
+
+The camera and the body turn separately, the usual third-person setup:
+
+- **The mouse turns only the camera** (`_cameraYaw`). The camera pivot is pinned to that yaw every
+  frame, even though it's a child of the body.
+- **The body turns to face where it moves** (`UpdateFacing`), smoothly (`TurnRate`). Walking back
+  or sideways turns the character around, and the run animation plays forward.
+- **Attacks, dash and abilities aim with the camera.** `FaceAim()` snaps the body to the camera,
+  and an **aim lock** (0.8 s) keeps it there, so a lunge or dash doesn't curve with your
+  movement. `RequestVerb(verb, yaw)` and `RequestAbility(yaw)` carry that yaw, and the server
+  applies it before acting, instead of waiting for the next unreliable input packet.
+- Executes check the victim's **body** facing, so "behind" matches what everyone sees.
+- Bots steer by turning their body; their camera follows it.
 
 ## Hit detection with rewind
 

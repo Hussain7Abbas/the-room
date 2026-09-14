@@ -41,6 +41,16 @@ public partial class Player : CharacterBody3D
     [Export] public Label3D? NameLabel;
 
     private SpringArm3D _springArm = null!;
+    // The camera turns on its own (mouse) and the body turns to face where it moves, the usual
+    // third-person setup. Before this the body WAS the camera: walking back or sideways made the
+    // character slide backwards or sideways, still facing forward.
+    private Node3D _cameraPivot = null!;
+    private float _cameraYaw;
+    // After an attack/dash/ability the body keeps facing the camera for a moment, so the swing,
+    // lunge or dash goes where you aimed instead of curving with your movement.
+    private float _aimLockRemaining;
+    private const float AimLockSeconds = 0.8f;
+    private const float TurnRate = 14f; // per second, exponential: most of a turn in ~0.15 s
     private MeshInstance3D? _meshInstance;
     // Everything tinted with the character colour and flashed for tells: the grey-box capsule's
     // material, or every surface of the character model once one is attached.
@@ -142,6 +152,8 @@ public partial class Player : CharacterBody3D
     public override void _Ready()
     {
         _springArm = GetNode<SpringArm3D>(SpringArmPath);
+        _cameraPivot = GetNode<Node3D>("CameraPivot");
+        _cameraYaw = GlobalRotation.Y;
         // The exported NameLabel was never assigned in Player.tscn, so SetDisplayName() silently
         // did nothing from Phase 0 until the first time anyone actually looked at a rendered frame.
         NameLabel ??= GetNodeOrNull<Label3D>("NameLabel");
@@ -228,7 +240,7 @@ public partial class Player : CharacterBody3D
 
         if (@event is InputEventMouseMotion mouseMotion && Input.MouseMode == Input.MouseModeEnum.Captured)
         {
-            RotateY(-mouseMotion.Relative.X * MouseSensitivity);
+            _cameraYaw -= mouseMotion.Relative.X * MouseSensitivity;
 
             _pitchRadians = Mathf.Clamp(
                 _pitchRadians - mouseMotion.Relative.Y * MouseSensitivity,
@@ -260,6 +272,14 @@ public partial class Player : CharacterBody3D
 
         if (_isOwner && _deathCamRemaining > 0f)
             RunDeathCam(delta);
+
+        if (_isOwner)
+        {
+            // Bots have no mouse: their camera just follows the body, as before.
+            if (_isBot)
+                _cameraYaw = GlobalRotation.Y;
+            _cameraPivot.GlobalRotation = new Vector3(0f, _cameraYaw, 0f);
+        }
 
         UpdateVisualEffects(delta);
         UpdateModelAnimation((float)delta);
@@ -297,7 +317,8 @@ public partial class Player : CharacterBody3D
     // Movement — shared step function, three different drivers
     // ------------------------------------------------------------------
 
-    private void SimulateStep(Vector2 inputDir, double delta, bool jump = false)
+    /// <summary><paramref name="worldDir"/> is the wanted move direction in world space (length ≤ 1).</summary>
+    private void SimulateStep(Vector3 worldDir, double delta, bool jump = false)
     {
         var velocity = Velocity;
 
@@ -317,7 +338,7 @@ public partial class Player : CharacterBody3D
         }
         else
         {
-            var direction = (Transform.Basis * new Vector3(inputDir.X, 0, inputDir.Y)).Normalized();
+            var direction = worldDir.Normalized();
             var effectiveSpeed = MoveSpeed * _slowMultiplier; // ability shared-kit: Ability.ApplySlow
 
             if (direction.LengthSquared() > 0.0001f)
@@ -354,8 +375,48 @@ public partial class Player : CharacterBody3D
 
     private void RunOfflinePhysics(double delta)
     {
+        // Practice has no server loop, so the protection timer counts down here. It used to
+        // tick only in RunServerPhysics, so a practice player flashed white forever.
+        if (_spawnProtectionRemaining > 0f)
+            _spawnProtectionRemaining = Mathf.Max(0f, _spawnProtectionRemaining - (float)delta);
+
         if (IsDead) return;
-        SimulateStep(ReadMoveInput(), delta, !GameMenu.IsOpen && Input.IsActionJustPressed("jump"));
+        var worldDir = CameraRelative(ReadMoveInput());
+        UpdateFacing(worldDir, (float)delta);
+        SimulateStep(worldDir, delta, !GameMenu.IsOpen && Input.IsActionJustPressed("jump"));
+    }
+
+    /// <summary>WASD turned into a world direction relative to where the camera looks.</summary>
+    private Vector3 CameraRelative(Vector2 input) => new Basis(Vector3.Up, _cameraYaw) * new Vector3(input.X, 0f, input.Y);
+
+    /// <summary>The yaw that makes a body (which faces -Z) look along <paramref name="direction"/>.</summary>
+    public static float YawFacing(Vector3 direction) => Mathf.Atan2(-direction.X, -direction.Z);
+
+    /// <summary>Owner only: turn the body toward the way it's moving, or toward the camera while
+    /// an attack's aim lock lasts. The server takes this yaw from SubmitInput, so remote players
+    /// see the turn too.</summary>
+    private void UpdateFacing(Vector3 worldDir, float delta)
+    {
+        float? target = null;
+        if (_aimLockRemaining > 0f)
+        {
+            _aimLockRemaining -= delta;
+            target = _cameraYaw;
+        }
+        else if (worldDir.LengthSquared() > 0.01f)
+        {
+            target = YawFacing(worldDir);
+        }
+
+        if (target is { } yaw)
+            GlobalRotation = new Vector3(GlobalRotation.X, Mathf.LerpAngle(GlobalRotation.Y, yaw, 1f - Mathf.Exp(-TurnRate * delta)), GlobalRotation.Z);
+    }
+
+    /// <summary>Owner: snap the body to the camera before an attack, dash or ability, and hold it there briefly.</summary>
+    private void FaceAim()
+    {
+        GlobalRotation = new Vector3(GlobalRotation.X, _cameraYaw, GlobalRotation.Z);
+        _aimLockRemaining = AimLockSeconds;
     }
 
     /// <summary>WASD for the local human; nothing while the Esc menu is open (the match keeps
@@ -366,11 +427,22 @@ public partial class Player : CharacterBody3D
 
     private void RunPredictedPhysics(double delta)
     {
-        var inputDir = _isBot ? _botMoveInput : ReadMoveInput();
+        Vector3 worldDir;
+        if (_isBot)
+        {
+            // Bots steer by turning their body (RunBotAi) and walking "forward".
+            worldDir = Transform.Basis * new Vector3(_botMoveInput.X, 0f, _botMoveInput.Y);
+        }
+        else
+        {
+            worldDir = CameraRelative(ReadMoveInput());
+            if (!IsDead)
+                UpdateFacing(worldDir, (float)delta);
+        }
         var jump = !_isBot && !IsDead && !GameMenu.IsOpen && Input.IsActionJustPressed("jump");
         if (jump)
             _jumpCounter++;
-        SimulateStep(inputDir, delta, jump);
+        SimulateStep(worldDir, delta, jump);
 
         var tick = Engine.GetPhysicsFrames();
         _predictedHistory.Add(new PredictedState(tick, GlobalPosition));
@@ -380,7 +452,8 @@ public partial class Player : CharacterBody3D
 
         var yaw = GlobalRotation.Y;
         var jumpCounter = _jumpCounter;
-        Net.Instance.SendWithSimulation(() => RpcId(1, nameof(SubmitInput), tick, inputDir, yaw, jumpCounter));
+        var moveDir = new Vector2(worldDir.X, worldDir.Z);
+        Net.Instance.SendWithSimulation(() => RpcId(1, nameof(SubmitInput), tick, moveDir, yaw, jumpCounter));
     }
 
     private void RunServerPhysics(double delta)
@@ -389,7 +462,7 @@ public partial class Player : CharacterBody3D
             GlobalRotation = new Vector3(GlobalRotation.X, _serverPendingYaw, GlobalRotation.Z);
 
         if (!IsDead)
-            SimulateStep(_serverPendingInput, delta, _serverJumpQueued);
+            SimulateStep(new Vector3(_serverPendingInput.X, 0f, _serverPendingInput.Y), delta, _serverJumpQueued);
         _serverJumpQueued = false;
 
         var tick = Engine.GetPhysicsFrames();
@@ -400,14 +473,14 @@ public partial class Player : CharacterBody3D
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
-    private void SubmitInput(ulong tick, Vector2 inputDir, float yaw, int jumpCounter)
+    private void SubmitInput(ulong tick, Vector2 moveDir, float yaw, int jumpCounter)
     {
         if (!_isServer)
             return;
         if (Multiplayer.GetRemoteSenderId() != _peerId)
             return; // reject input claiming to control someone else's node
 
-        _serverPendingInput = inputDir;
+        _serverPendingInput = moveDir.LimitLength(1f); // world-space x/z; never faster than walking
         _serverPendingYaw = yaw;
 
         // Jumps travel as a running count, not a one-tick "pressed" flag: input packets are
@@ -501,6 +574,7 @@ public partial class Player : CharacterBody3D
     private void RequestVerbLocal(Verb verb)
     {
         AttackRequestCount++;
+        FaceAim();
 
         if (_isOffline)
         {
@@ -509,16 +583,22 @@ public partial class Player : CharacterBody3D
             return;
         }
 
-        Net.Instance.SendWithSimulation(() => RpcId(1, nameof(RequestVerb), (int)verb));
+        // The facing travels with the verb: the unreliable input stream could be a tick or two
+        // behind, and a dash or lunge must go exactly where the player aimed.
+        var yaw = GlobalRotation.Y;
+        Net.Instance.SendWithSimulation(() => RpcId(1, nameof(RequestVerb), (int)verb, yaw));
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void RequestVerb(int verbInt)
+    private void RequestVerb(int verbInt, float yaw)
     {
         if (!_isServer)
             return;
         if (Multiplayer.GetRemoteSenderId() != _peerId)
             return; // reject a verb claiming to be from someone else's node
+
+        _serverPendingYaw = yaw;
+        GlobalRotation = new Vector3(GlobalRotation.X, yaw, GlobalRotation.Z);
 
         TryStartVerb((Verb)verbInt);
     }
@@ -1064,6 +1144,7 @@ public partial class Player : CharacterBody3D
             return;
 
         _spawnProtectionRemaining = 0f; // cancelled instantly on any deliberate action, same as the melee verbs
+        FaceAim(); // abilities aim with the camera too (Blink goes where you look)
 
         if (_isOffline)
         {
@@ -1071,11 +1152,12 @@ public partial class Player : CharacterBody3D
             return;
         }
 
-        Net.Instance.SendWithSimulation(() => RpcId(1, nameof(RequestAbility)));
+        var yaw = GlobalRotation.Y;
+        Net.Instance.SendWithSimulation(() => RpcId(1, nameof(RequestAbility), yaw));
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void RequestAbility()
+    private void RequestAbility(float yaw)
     {
         if (!_isServer)
             return;
@@ -1083,6 +1165,9 @@ public partial class Player : CharacterBody3D
             return;
         if (_combatState != CombatState.Idle)
             return;
+
+        _serverPendingYaw = yaw;
+        GlobalRotation = new Vector3(GlobalRotation.X, yaw, GlobalRotation.Z);
 
         _ability?.TryActivate();
     }
@@ -1221,8 +1306,7 @@ public partial class Player : CharacterBody3D
         toKiller.Y = 0;
         if (toKiller.LengthSquared() > 0.01f)
         {
-            var lookBasis = Basis.LookingAt(toKiller.Normalized(), Vector3.Up);
-            GlobalRotation = new Vector3(GlobalRotation.X, lookBasis.GetEuler().Y, GlobalRotation.Z);
+            _cameraYaw = YawFacing(toKiller.Normalized());
         }
     }
 

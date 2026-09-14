@@ -34,7 +34,7 @@ Ways to play locally:
 | Action | Input |
 |---|---|
 | Move | W A S D |
-| Look | Mouse |
+| Look (camera) | Mouse. Your character faces the way you move, and turns to the camera when you attack. |
 | Light attack | Left mouse |
 | Heavy attack (lunge) | Right mouse |
 | Parry | Q |

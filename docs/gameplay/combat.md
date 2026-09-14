@@ -1,5 +1,9 @@
 # Combat
 
+**Aiming:** the mouse turns the camera, and your character turns to face the way you walk.
+Pressing an attack, dash or ability turns you to face the camera's direction at once, and holds
+that for 0.8 s, so you always strike where you aim.
+
 All combat is resolved **on the server** (`player/Player.cs`, `core/CombatServer.cs`). A client only
 asks to use a verb. The numbers below are the current values in `tuning/tuning.tres`.
 

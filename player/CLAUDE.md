@@ -21,7 +21,11 @@
 - **Movement goes through `SimulateStep`**, the step shared by server, owner and offline.
   Displacing moves (heavy lunge, Blink, future dashes) use `ServerSweep`, never a raw
   `GlobalPosition =`. Teleports end up inside geometry.
-- **Input to the server:** `SubmitInput(tick, dir, yaw, jumpCounter)` is unreliable. One-shot
+- **Camera and body turn separately.** The mouse changes `_cameraYaw` (the pivot is pinned to it);
+  `UpdateFacing` turns the body toward the move direction; `FaceAim()` + the aim lock face the
+  camera for attacks, dash and abilities. Never `RotateY` the body from mouse input.
+- **Input to the server:** `SubmitInput(tick, worldDir, bodyYaw, jumpCounter)` is unreliable.
+  `worldDir` is world-space (camera-relative for humans). Verbs and abilities carry the yaw too. One-shot
   actions travel as counters, so a dropped packet doesn't eat them (see the jump). Verbs use the
   reliable `RequestVerb`.
 - Combat state (`_combatState`) is **server-only**. Clients learn about it only through

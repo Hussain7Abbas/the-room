@@ -38,7 +38,7 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
 | D3 | **Ragdolls** | Build **procedural primitive ragdolls** (capsule/sphere `PhysicalBone3D` rig via Jolt) instead of a downloaded asset for grey-box (Phase 2). Revisit a real skinned-mesh ragdoll only at the Phase 5 art pass, and only from a clearly-licensed free asset the user picks — not auto-downloaded. | Avoids pulling in unvetted third-party assets/licenses sight-unseen; grey-box phase shouldn't depend on art anyway. |
 | D4 | **Networking stack** | Godot high-level multiplayer over **ENet**, dedicated headless server on a **VPS** | Resolves the GDD §12 Steam question: free, self-hosted. |
 | D5 | **Jump / hop** | ~~Build no-jump first~~ → **jump on Space, on by default** (user request after first play, 2026-09-14). Dash moved to Shift. | GDD §5.1 leaves it `TBD`; `Tuning.HopEnabled` still turns it off for an A/B. |
-| D6 | Git | Done — repo already initialized by the user, `origin` = `github.com/Hussain7Abbas/the-room`, one commit (`init`). | Tuning file must be version-controlled per GDD §9. |
+| D6 | Git | Done — repo already initialized by the user, `origin` = `github.com/Hussain7Abbas/the-room`, one commit (`init`). Moved to the **Voidra** org on 2026-09-14: `github.com/Voidra-iq/the-room`. | Tuning file must be version-controlled per GDD §9. |
 
 ## Change log
 - 2026-09-14 — v0.1 plan created.
@@ -80,4 +80,5 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
   - The user's "300 sword" OBJ was baked by `tools/bake_knife.gd` from 106 surfaces into 4, with real materials, a 45 cm length and the origin at the grip. It's attached to the standard `RightHand` bone of any humanoid, and the grip was seated from close-up renders.
   - Every confirmed melee hit plays the stab as positional 3D audio at the victim, cued by the server.
   - Verified: a networked bot match had 8 hit sounds on a rendering client and 0 errors. The new test checks the knife attachment, and all tests pass (7 game, 9 lobby).
+- 2026-09-14 — **Facing fix.** The body was locked to the mouse, so walking back or sideways slid the character backwards or sideways. Now the camera turns on its own, the body turns toward its movement, and attacks, dash and abilities snap to the camera with a 0.8 s aim lock. Verbs carry their yaw to the server. Checked numerically in practice mode: S turned the body π from the camera, D −π/2, A +π/2. There's a regression test for the facing maths. Also fixed practice mode's spawn-protection flash, which never ended. The repo moved to the **Voidra-iq** org.
 

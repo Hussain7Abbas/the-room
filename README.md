@@ -26,7 +26,7 @@ developer who built them. Made by the **Voidra** team with Godot 4.7 (.NET / C#)
 Requirements: **Godot 4.7.2 .NET** and the **.NET SDK 8+**.
 
 ```bash
-git clone https://github.com/Hussain7Abbas/the-room.git && cd the-room
+git clone https://github.com/Voidra-iq/the-room.git && cd the-room
 make setup            # restore packages + build
 make run-local N=2    # a local server + 2 windowed clients
 ```

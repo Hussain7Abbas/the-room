@@ -137,7 +137,7 @@ the unit's values (step 9) before you run it**, or run it and fix them after. Th
 **Option B: on the server with git.**
 
 ```bash
-sudo -u theroom git clone https://github.com/Hussain7Abbas/the-room.git /opt/the-room/app
+sudo -u theroom git clone https://github.com/Voidra-iq/the-room.git /opt/the-room/app
 sudo -u theroom bash -c '
   export PATH=/opt/the-room/dotnet:$PATH DOTNET_ROOT=/opt/the-room/dotnet
   cd /opt/the-room/app &&
