@@ -20,6 +20,8 @@ config/icon="res://icon.svg"
 Events="*res://core/Events.cs"
 Tuning="*res://core/TuningService.cs"
 Net="*res://core/Net.cs"
+PingService="*res://core/PingService.cs"
+CombatServer="*res://core/CombatServer.cs"
 
 [display]
 

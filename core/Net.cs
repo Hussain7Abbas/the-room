@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Godot;
+using TheRoom.Config;
 
 namespace TheRoom.Core;
 
@@ -10,11 +11,13 @@ namespace TheRoom.Core;
 ///   --connect=&lt;ip&gt;       join a server as a client (default 127.0.0.1)
 ///   --port=&lt;port&gt;        override the default port (60010)
 ///   --name=&lt;name&gt;        display name to send to the server on connect
+///   --bot                run as a headless client driven by simple wander/stab AI instead of
+///                        real input (see player/Player.cs) — for reaching 20 players with few humans
+///   --sim-latency=&lt;ms&gt;   artificially delay this client's outgoing input/stab RPCs (local testing only)
+///   --sim-loss=&lt;0..1&gt;    artificially drop this fraction of this client's outgoing RPCs
 ///
 /// With none of these flags, the game runs OFFLINE (no MultiplayerPeer at all) so a single
 /// person can open the editor and just look at the room/player — useful for quick iteration.
-/// This is Phase 0 scaffolding only; Phase 1 replaces the bare ENet setup with the
-/// tick-history + rewind hit-lag-compensation layer described in plan/phase-1-network-spike.md.
 /// </summary>
 public partial class Net : Node
 {
@@ -26,13 +29,23 @@ public partial class Net : Node
     public bool IsServer { get; private set; }
     public bool IsClient { get; private set; }
     public bool IsOffline { get; private set; } = true;
+    public bool IsBot { get; private set; }
     public string LocalPlayerName { get; private set; } = "Player";
+
+    /// <summary>Artificial one-way delay (seconds) applied to this client's own outgoing RPCs. 0 = off.</summary>
+    public float SimLatencySeconds { get; private set; }
+    /// <summary>Fraction [0,1] of this client's own outgoing RPCs to silently drop. 0 = off.</summary>
+    public float SimPacketLossFraction { get; private set; }
 
     private readonly Dictionary<long, string> _connectedPlayerNames = new();
 
     public override void _Ready()
     {
         Instance = this;
+
+        // Fixed tick rate for deterministic server simulation / hit-rewind (GDD §4, Tuning.ServerTickRateHz).
+        Engine.PhysicsTicksPerSecond = TuningService.Instance.ServerTickRateHz;
+
         ParseArgsAndStart();
     }
 
@@ -56,6 +69,14 @@ public partial class Net : Node
         LocalPlayerName = args.TryGetValue("name", out var name) && !string.IsNullOrWhiteSpace(name)
             ? name
             : $"Player{GD.Randi() % 1000}";
+
+        IsBot = args.ContainsKey("bot");
+
+        if (args.TryGetValue("sim-latency", out var latencyStr) && float.TryParse(latencyStr, out var latencyMs))
+            SimLatencySeconds = Mathf.Max(0f, latencyMs) / 1000f;
+
+        if (args.TryGetValue("sim-loss", out var lossStr) && float.TryParse(lossStr, out var lossFrac))
+            SimPacketLossFraction = Mathf.Clamp(lossFrac, 0f, 1f);
 
         if (wantsServer)
         {
@@ -110,6 +131,26 @@ public partial class Net : Node
         Multiplayer.ServerDisconnected += () => GD.Print("[Net] Server disconnected.");
 
         GD.Print($"[Net] Connecting to {host}:{port} ...");
+    }
+
+    /// <summary>
+    /// Routes an outgoing RPC call through this client's simulated latency/packet-loss
+    /// (--sim-latency / --sim-loss), for testing prediction/reconciliation locally without
+    /// a real bad connection. A no-op passthrough when neither flag is set.
+    /// </summary>
+    public void SendWithSimulation(System.Action send)
+    {
+        if (SimPacketLossFraction > 0f && GD.Randf() < SimPacketLossFraction)
+            return; // simulated drop
+
+        if (SimLatencySeconds > 0f)
+        {
+            GetTree().CreateTimer(SimLatencySeconds).Timeout += send;
+        }
+        else
+        {
+            send();
+        }
     }
 
     private void OnPeerConnected(long id)

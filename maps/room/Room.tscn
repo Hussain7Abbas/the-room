@@ -28,26 +28,31 @@ shadow_enabled = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 size = Vector3(40, 1, 40)
 material = SubResource("Mat_Floor")
+use_collision = true
 
 [node name="WallNorth" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, -20)
 size = Vector3(40, 6, 1)
 material = SubResource("Mat_Wall")
+use_collision = true
 
 [node name="WallSouth" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 20)
 size = Vector3(40, 6, 1)
 material = SubResource("Mat_Wall")
+use_collision = true
 
 [node name="WallEast" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 3, 0)
 size = Vector3(1, 6, 40)
 material = SubResource("Mat_Wall")
+use_collision = true
 
 [node name="WallWest" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 3, 0)
 size = Vector3(1, 6, 40)
 material = SubResource("Mat_Wall")
+use_collision = true
 
 ; --- Center plinth (contested Golden Knife spot, GDD §5.4) ---
 
@@ -57,6 +62,7 @@ radius = 2.0
 height = 1.0
 sides = 8
 material = SubResource("Mat_Floor")
+use_collision = true
 
 ; --- Pillars: break sightlines across the room ---
 
@@ -65,18 +71,21 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1.5, 8)
 radius = 1.0
 height = 3.0
 material = SubResource("Mat_Wall")
+use_collision = true
 
 [node name="Pillar2" type="CSGCylinder3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 1.5, 8)
 radius = 1.0
 height = 3.0
 material = SubResource("Mat_Wall")
+use_collision = true
 
 [node name="Pillar3" type="CSGCylinder3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -10)
 radius = 1.0
 height = 3.0
 material = SubResource("Mat_Wall")
+use_collision = true
 
 ; --- One ramp: verticality test (GDD open question) ---
 
@@ -84,11 +93,13 @@ material = SubResource("Mat_Wall")
 transform = Transform3D(1, 0, 0, 0, 0.9848, -0.1736, 0, 0.1736, 0.9848, -14, 1, -14)
 size = Vector3(6, 0.3, 8)
 material = SubResource("Mat_Floor")
+use_collision = true
 
 [node name="RampPlatform" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 2, -18.5)
 size = Vector3(6, 0.3, 3)
 material = SubResource("Mat_Floor")
+use_collision = true
 
 ; --- Spawn points: kept away from center, spread around perimeter ---
 

@@ -70,4 +70,16 @@ public partial class Tuning : Resource
     [Export] public int ServerTickRateHz = 30;
     [Export] public float MaxRewindTimeSeconds = 0.2f; // 200ms, GDD §4
     [Export] public float InterpolationDelaySeconds = 0.1f; // 100ms
+    [Export] public float PingIntervalSeconds = 1.0f;
+    [Export] public float ReconciliationSnapDistance = 1.5f; // beyond this, teleport-correct instead of smoothing
+    [Export] public float ReconciliationSmoothTime = 0.12f;
+
+    [ExportGroup("Safety")]
+    [Export] public float VoidCatchY = -20.0f; // fall below this world Y anywhere -> reset to a spawn point
+
+    [ExportGroup("Network Spike — temporary stab verb (replaced by real melee in Phase 2)")]
+    [Export] public float StabRange = 2.5f;
+    [Export] public float StabHitRadius = 1.0f;
+    [Export] public float StabDamage = 25.0f;
+    [Export] public float StabCooldown = 0.5f;
 }

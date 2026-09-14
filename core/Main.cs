@@ -18,6 +18,10 @@ public partial class Main : Node3D
     private readonly List<Marker3D> _spawnMarkers = new();
     private int _nextSpawnIndex;
 
+    // Static so Player.cs can grab a respawn point (network-spike stab loop, core/CombatServer.cs)
+    // without needing a scene-tree reference back to Main.
+    private static readonly List<Marker3D> _staticSpawnMarkers = new();
+
     public override void _Ready()
     {
         _playersContainer = GetNode<Node3D>("PlayersContainer");
@@ -27,20 +31,30 @@ public partial class Main : Node3D
         {
             foreach (var child in spawnPoints.GetChildren())
             {
-                if (child is Marker3D marker)
-                    _spawnMarkers.Add(marker);
+                if (child is not Marker3D marker)
+                    continue;
+
+                _spawnMarkers.Add(marker);
+                _staticSpawnMarkers.Add(marker);
             }
         }
 
         Events.Instance.PlayerConnected += OnPlayerConnected;
         Events.Instance.PlayerDisconnected += OnPlayerDisconnected;
 
-        // The server (and offline mode) spawns its own local player as peer id 1 immediately —
-        // PeerConnected only fires for *remote* peers, never for yourself.
-        if (Net.Instance.IsServer || Net.Instance.IsOffline)
+        // A dedicated server never plays — it only spawns nodes for real connecting peers
+        // (OnPlayerConnected below). Offline mode is a single local player with no server at all.
+        if (Net.Instance.IsOffline)
         {
             SpawnPlayer(1);
         }
+    }
+
+    public static Marker3D? PickRandomSpawn()
+    {
+        return _staticSpawnMarkers.Count > 0
+            ? _staticSpawnMarkers[(int)(GD.Randi() % (uint)_staticSpawnMarkers.Count)]
+            : null;
     }
 
     private void OnPlayerConnected(long peerId)

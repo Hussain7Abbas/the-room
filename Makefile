@@ -28,7 +28,7 @@ N       ?= 2
 
 .PHONY: help \
 	install setup \
-	build run-server run-client run-local \
+	build run-server run-client run-local run-bots \
 	clean \
 	test \
 	export-server export-client
@@ -49,6 +49,7 @@ help:
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "run-server" "Run a dedicated headless server ($(YELLOW)godot --headless --server$(RESET)). PORT=$(PORT)"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "run-client" "Run one windowed client and connect ($(YELLOW)godot --connect$(RESET)). HOST=$(HOST) PORT=$(PORT)"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "run-local" "Spawn 1 local server + N windowed clients. N=$(N) PORT=$(PORT)"
+	@printf "  $(GREEN)%-14s$(RESET) %s\n" "run-bots" "Connect N headless wander/stab bots to a server (see run-server). N=$(N) HOST=$(HOST) PORT=$(PORT)"
 	@echo ""
 	@echo "$(BLUE)Quality$(RESET)"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "clean" "Remove build/editor caches ($(YELLOW).godot/mono, bin, obj$(RESET))"
@@ -98,6 +99,15 @@ run-local: build
 		echo "$(GREEN)Starting client $$i...$(RESET)"; \
 		"$(GODOT)" --path . -- --connect=127.0.0.1 --port=$(PORT) --name=Player$$i & \
 		sleep 0.5; \
+	done; \
+	wait
+
+run-bots: build
+	@cd "$(ROOT)" && \
+	for i in $$(seq 1 $(N)); do \
+		echo "$(GREEN)Starting bot $$i...$(RESET)"; \
+		"$(GODOT)" --headless --path . -- --connect=$(HOST) --port=$(PORT) --name=Bot$$i --bot & \
+		sleep 0.3; \
 	done; \
 	wait
 
