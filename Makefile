@@ -71,8 +71,8 @@ help:
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "deploy-server" "rsync + rebuild + restart the dedicated server on $(DEPLOY_HOST) ($(YELLOW)systemd: $(DEPLOY_SERVICE)$(RESET))"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "deploy-status" "Show the deployed server's systemd status"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "deploy-logs" "Tail the deployed server's journal"
-	@printf "  $(GREEN)%-14s$(RESET) %s\n" "export-server" "TODO — needs export_presets.cfg (Linux headless server template)"
-	@printf "  $(GREEN)%-14s$(RESET) %s\n" "export-client" "TODO — needs export_presets.cfg (Windows client template)"
+	@printf "  $(GREEN)%-14s$(RESET) %s\n" "export-server" "Export a standalone Linux server binary to build/server/"
+	@printf "  $(GREEN)%-14s$(RESET) %s\n" "export-client" "Export a standalone Windows client .exe to build/client/"
 
 ## ------------------------------------------------------------------------
 ## Setup
@@ -163,14 +163,12 @@ deploy-status:
 deploy-logs:
 	@ssh "$(DEPLOY_HOST)" "journalctl -u $(DEPLOY_SERVICE) -n 100 --no-pager"
 
-export-server:
-	@echo "$(YELLOW)No export_presets.cfg yet.$(RESET) Add a 'Linux/X11' headless server preset in the Godot editor" \
-		"(Project > Export...) named 'server', then this target will run:" \
-		"godot --headless --export-release server build/server/the-room-server"
-	@exit 1
+export-server: build
+	@mkdir -p "$(ROOT)/build/server"
+	@cd "$(ROOT)" && "$(GODOT)" --headless --path . --export-release server build/server/the-room-server.x86_64
+	@echo "$(GREEN)Exported to build/server/the-room-server.x86_64$(RESET) (Linux x86_64 — needs Godot's Linux export templates installed for this platform's Godot editor)"
 
-export-client:
-	@echo "$(YELLOW)No export_presets.cfg yet.$(RESET) Add a 'Windows Desktop' client preset in the Godot editor" \
-		"(Project > Export...) named 'client', then this target will run:" \
-		"godot --headless --export-release client build/client/the-room.exe"
-	@exit 1
+export-client: build
+	@mkdir -p "$(ROOT)/build/client"
+	@cd "$(ROOT)" && "$(GODOT)" --headless --path . --export-release client build/client/the-room.exe
+	@echo "$(GREEN)Exported to build/client/the-room.exe$(RESET) (Windows x86_64 — needs Godot's Windows export templates installed for this platform's Godot editor)"

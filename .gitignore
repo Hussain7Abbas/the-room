@@ -7,8 +7,10 @@ bin/
 obj/
 *.user
 
-# Exports
-/build/
+# Exports — build/.gdignore is deliberately tracked (keeps Godot's project scanner, and every
+# export, from re-including a previous export's own output — see plan/phase-0-foundation.md)
+/build/*
+!/build/.gdignore
 
 # Runtime data (core/SeasonStats.cs writes this on the running server, per-deployment, never committed)
 /season_stats.json
