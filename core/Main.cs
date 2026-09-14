@@ -12,25 +12,25 @@ namespace TheRoom.Core;
 /// </summary>
 public partial class Main : Node3D
 {
-    private const string PlayerScenePath = "res://player/Player.tscn";
+	private const string PlayerScenePath = "res://player/Player.tscn";
 
-    private Node3D _playersContainer = null!;
-    private readonly List<Marker3D> _spawnMarkers = new();
-    private int _nextSpawnIndex;
+	private Node3D _playersContainer = null!;
+	private readonly List<Marker3D> _spawnMarkers = new();
+	private int _nextSpawnIndex;
 
-    // Static so Player.cs can grab a respawn point (core/CombatServer.cs, death/respawn) without
-    // needing a scene-tree reference back to Main.
-    private static readonly List<Marker3D> _staticSpawnMarkers = new();
+	// Static so Player.cs can grab a respawn point (core/CombatServer.cs, death/respawn) without
+	// needing a scene-tree reference back to Main.
+	private static readonly List<Marker3D> _staticSpawnMarkers = new();
 
-    // Static peer id -> display name, for UI (killfeed/scoreboard) that has no Player reference.
-    private static readonly Dictionary<long, string> _playerNames = new();
-    public static IReadOnlyDictionary<long, string> PlayerNames => _playerNames;
-    public static string GetPlayerName(long peerId) => _playerNames.TryGetValue(peerId, out var n) ? n : $"Player {peerId}";
-    public static void RegisterPlayerName(long peerId, string name) => _playerNames[peerId] = name;
+	// Static peer id -> display name, for UI (killfeed/scoreboard) that has no Player reference.
+	private static readonly Dictionary<long, string> _playerNames = new();
+	public static IReadOnlyDictionary<long, string> PlayerNames => _playerNames;
+	public static string GetPlayerName(long peerId) => _playerNames.TryGetValue(peerId, out var n) ? n : $"Player {peerId}";
+	public static void RegisterPlayerName(long peerId, string name) => _playerNames[peerId] = name;
 
-    public override void _Ready()
-    {
-        // Connects a join queued by the menu (or --connect) now that the spawner's target exists,
+	public override void _Ready()
+	{
+		// Connects a join queued by the menu (or --connect) now that the spawner's target exists,
         // or makes this an offline session when Main.tscn is run straight from the editor.
         Net.Instance.BeginGameScene();
         MatchServer.Instance.BeginSession();
@@ -64,56 +64,56 @@ public partial class Main : Node3D
     public override void _ExitTree()
     {
         // Leaving a room back to the menu. These statics and the match state would otherwise
-        // leak into the next room: freed spawn markers, old names, last room's scores.
-        Events.Instance.PlayerConnected -= OnPlayerConnected;
-        Events.Instance.PlayerDisconnected -= OnPlayerDisconnected;
-        _staticSpawnMarkers.Clear();
-        _playerNames.Clear();
-        MatchServer.Instance.EndSession();
-    }
+		// leak into the next room: freed spawn markers, old names, last room's scores.
+		Events.Instance.PlayerConnected -= OnPlayerConnected;
+		Events.Instance.PlayerDisconnected -= OnPlayerDisconnected;
+		_staticSpawnMarkers.Clear();
+		_playerNames.Clear();
+		MatchServer.Instance.EndSession();
+	}
 
-    public static Marker3D? PickRandomSpawn()
-    {
-        return _staticSpawnMarkers.Count > 0
-            ? _staticSpawnMarkers[(int)(GD.Randi() % (uint)_staticSpawnMarkers.Count)]
-            : null;
-    }
+	public static Marker3D? PickRandomSpawn()
+	{
+		return _staticSpawnMarkers.Count > 0
+			? _staticSpawnMarkers[(int)(GD.Randi() % (uint)_staticSpawnMarkers.Count)]
+			: null;
+	}
 
-    private void OnPlayerConnected(long peerId)
-    {
-        if (!Net.Instance.IsServer)
-            return; // only the server spawns authoritative player nodes; clients receive them via MultiplayerSpawner
+	private void OnPlayerConnected(long peerId)
+	{
+		if (!Net.Instance.IsServer)
+			return; // only the server spawns authoritative player nodes; clients receive them via MultiplayerSpawner
 
-        SpawnPlayer(peerId);
-    }
+		SpawnPlayer(peerId);
+	}
 
-    private void OnPlayerDisconnected(long peerId)
-    {
-        if (!Net.Instance.IsServer)
-            return;
+	private void OnPlayerDisconnected(long peerId)
+	{
+		if (!Net.Instance.IsServer)
+			return;
 
-        var node = _playersContainer.GetNodeOrNull(peerId.ToString());
-        node?.QueueFree();
-    }
+		var node = _playersContainer.GetNodeOrNull(peerId.ToString());
+		node?.QueueFree();
+	}
 
-    private void SpawnPlayer(long peerId)
-    {
-        var scene = GD.Load<PackedScene>(PlayerScenePath);
-        var player = scene.Instantiate<Player>();
-        player.Name = peerId.ToString();
-        player.SetMultiplayerAuthority((int)peerId);
+	private void SpawnPlayer(long peerId)
+	{
+		var scene = GD.Load<PackedScene>(PlayerScenePath);
+		var player = scene.Instantiate<Player>();
+		player.Name = peerId.ToString();
+		player.SetMultiplayerAuthority((int)peerId);
 
-        _playersContainer.AddChild(player, forceReadableName: true);
+		_playersContainer.AddChild(player, forceReadableName: true);
 
-        if (_spawnMarkers.Count > 0)
-        {
-            var spawn = _spawnMarkers[_nextSpawnIndex++ % _spawnMarkers.Count];
-            player.GlobalTransform = spawn.GlobalTransform;
-        }
+		if (_spawnMarkers.Count > 0)
+		{
+			var spawn = _spawnMarkers[_nextSpawnIndex++ % _spawnMarkers.Count];
+			player.GlobalTransform = spawn.GlobalTransform;
+		}
 
-        var isLocalPlayer = Net.Instance.IsOffline || peerId == Multiplayer.GetUniqueId();
-        var displayName = isLocalPlayer ? Net.Instance.LocalPlayerName : $"Player {peerId}";
-        player.SetDisplayName(displayName);
-        _playerNames[peerId] = displayName;
-    }
+		var isLocalPlayer = Net.Instance.IsOffline || peerId == Multiplayer.GetUniqueId();
+		var displayName = isLocalPlayer ? Net.Instance.LocalPlayerName : $"Player {peerId}";
+		player.SetDisplayName(displayName);
+		_playerNames[peerId] = displayName;
+	}
 }

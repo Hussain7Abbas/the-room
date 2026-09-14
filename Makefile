@@ -45,7 +45,7 @@ DEPLOY_SERVICE ?= the-room-lobby.service
 	clean \
 	test lobby-test \
 	deploy-server deploy-nginx deploy-logs deploy-status \
-	export-server export-client
+	export-server export-client export-mac
 
 ## ------------------------------------------------------------------------
 ## help
@@ -82,6 +82,7 @@ help:
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "deploy-logs" "Tail the deployed server's journal"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "export-server" "Export a standalone Linux server binary to build/server/"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "export-client" "Export a standalone Windows client .exe to build/client/"
+	@printf "  $(GREEN)%-14s$(RESET) %s\n" "export-mac" "Export a macOS app (universal) to build/macos/The Room.app"
 
 ## ------------------------------------------------------------------------
 ## Setup
@@ -214,6 +215,11 @@ export-server: build
 	@mkdir -p "$(ROOT)/build/server"
 	@cd "$(ROOT)" && "$(GODOT)" --headless --path . --export-release server build/server/the-room-server.x86_64
 	@echo "$(GREEN)Exported to build/server/the-room-server.x86_64$(RESET) (Linux x86_64 — needs Godot's Linux export templates installed for this platform's Godot editor)"
+
+export-mac: build
+	@mkdir -p "$(ROOT)/build/macos"
+	@cd "$(ROOT)" && "$(GODOT)" --headless --path . --export-release mac "build/macos/The Room.app"
+	@echo "$(GREEN)Exported to build/macos/The Room.app$(RESET) (universal: Apple Silicon + Intel; ad-hoc signed)"
 
 export-client: build
 	@mkdir -p "$(ROOT)/build/client"

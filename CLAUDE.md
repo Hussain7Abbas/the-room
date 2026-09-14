@@ -50,6 +50,7 @@ make run-bots N=6 HOST=… PORT=…
 make preview-animations MODEL=res://…fbx
 make deploy-server    # rsync + build + publish lobby + restart (VPS alias: kios-chat)
 make deploy-nginx
+make export-mac       # build/macos/The Room.app (see docs/building.md); export-client for Windows
 ```
 
 The .NET SDK sits at `/usr/local/share/dotnet` and isn't on PATH. The Makefile adds it; in a raw

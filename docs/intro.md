@@ -29,6 +29,7 @@ code: see "Keeping docs current" below.
 | ├ [Rooms](lobby/rooms.md) | room lifecycle, limits, the main room |
 | └ [Match history & leaderboard](lobby/match-history.md) | storage, ranking rules, pagination |
 | [Menus (UI)](ui.md) | main menu, in-game menu, theme |
+| [Building the game](building.md) | making the macOS app and Windows client (and sharing them) |
 | [Testing](testing.md) | the test suites, bots, and checking visuals by rendering |
 | [Deployment](deployment.md) | updating the live server we already run |
 | [Server configuration](server-config.md) | installing everything on a **new** server from scratch |

@@ -27,7 +27,7 @@ Ways to play locally:
 | Fill a room with bots | `make run-bots N=6 HOST=127.0.0.1 PORT=60010` |
 | Preview a character model's animations | `make preview-animations MODEL=res://assets/characters/zain/zain.fbx` |
 
-`make help` lists every target.
+`make help` lists every target. To make a standalone app (macOS or Windows), see [Building the game](building.md).
 
 ## Controls
 

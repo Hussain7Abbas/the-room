@@ -87,3 +87,8 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
   - About: the game description, © 2026 Voidra Team and a link to github.com/Voidra-iq.
   - Fixed: the menu saved name and character into a fresh settings file, which would have wiped other settings. Everything now goes through `GameSettings`.
   - 3 new tests. Dialogs checked in renders.
+- 2026-09-14 — **macOS build.**
+  - `make export-mac` produces `build/macos/The Room.app`, a universal build for Apple Silicon and Intel. It imports ETC2/ASTC textures for Apple Silicon and adds the .NET entitlements (JIT, unsigned executable memory, library validation).
+  - It's signed ad-hoc with Apple's `codesign`. Godot's built-in signer produced an app Apple Silicon killed at launch (exit 137, no output); the cause was found by re-signing with `codesign`, which ran.
+  - Verified: the exported app reaches the main menu and connects to the live lobby.
+  - `docs/building.md` explains the builds, where they go, and how to share an unnotarized Mac app.

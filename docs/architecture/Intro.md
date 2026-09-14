@@ -35,7 +35,7 @@ Cloudflare's proxy only carries HTTP.
 
 - [Networking](networking.md): authority, prediction and reconciliation, interpolation, rewind
   hit detection, RPC patterns.
-- [Sessions & scenes](sessions-and-scenes.md): how one client moves between the menu, rooms and
+- [Sessions &amp; scenes](sessions-and-scenes.md): how one client moves between the menu, rooms and
   practice.
 - [Match loop](match-loop.md): what the server runs during a match, and what it reports.
 
@@ -43,12 +43,12 @@ For the lobby's side, see [Lobby service](../lobby/Intro.md).
 
 ## Where things live
 
-| Concern | Code |
-|---|---|
-| Session and connection | `core/Net.cs` |
-| Player movement, combat, bots | `player/Player.cs` |
-| Hit detection with rewind | `core/CombatServer.cs` |
-| Match rules | `core/MatchServer.cs` |
+| Concern                          | Code                   |
+| -------------------------------- | ---------------------- |
+| Session and connection           | `core/Net.cs`          |
+| Player movement, combat, bots    | `player/Player.cs`     |
+| Hit detection with rewind        | `core/CombatServer.cs` |
+| Match rules                      | `core/MatchServer.cs`  |
 | Talking to the lobby (room side) | `core/RoomReporter.cs` |
-| Talking to the lobby (menu side) | `core/LobbyApi.cs` |
-| Lobby | `services/lobby/` |
+| Talking to the lobby (menu side) | `core/LobbyApi.cs`     |
+| Lobby                            | `services/lobby/`      |

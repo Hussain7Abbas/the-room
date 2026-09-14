@@ -40,6 +40,9 @@ public lobby, where you can join the main room, create your own, or practice alo
 
 `make help` lists everything else: bots, a local lobby, animation preview, tests and deploy.
 
+**Builds:** `make export-mac` makes `build/macos/The Room.app` (universal), and
+`make export-client` makes the Windows build. See [Building the game](docs/building.md).
+
 ## Documentation
 
 Everything is in **[`docs/`](docs/intro.md)**:
