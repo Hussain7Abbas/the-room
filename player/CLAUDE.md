@@ -36,6 +36,9 @@
   - attack animations only ever play from the server's `BroadcastAttackCue`;
   - the stab sound plays only from `BroadcastHitSound`, sent when the server confirms a landed
     hit in `ResolveMeleeAttack`. It's positional `AudioStreamPlayer3D`, and headless peers skip it.
+- **Timers that drive visuals count down on every copy** (top of `_PhysicsProcess`), and the server
+  sets and cancels them with a broadcast (`SetSpawnProtection`). A timer that only ticks on the
+  server leaves clients stuck: the "white character" bug.
 - Local input is ignored while `GameMenu.IsOpen`. Esc belongs to `ui/GameMenu`, not Player.
 - Identity (name + character) syncs with `AnnounceIdentity` / `ReceiveIdentity`, plus
   `RequestIdentity` for late joiners. MultiplayerSpawner doesn't replicate properties changed

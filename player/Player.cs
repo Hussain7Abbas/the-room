@@ -197,9 +197,12 @@ public partial class Player : CharacterBody3D
 
             if (!_isBot)
                 Input.MouseMode = Input.MouseModeEnum.Captured;
-
-            _spawnProtectionRemaining = TuningService.Instance.SpawnProtectionDuration;
         }
+
+        // A freshly spawned player is protected on the server (which decides damage) and shows the
+        // shimmer on its owner's screen. Later respawns and cancels are broadcast to everyone.
+        if (_isServer || _isOwner)
+            _spawnProtectionRemaining = TuningService.Instance.SpawnProtectionDuration;
 
         // Identity handshake: the owning client tells the server its chosen name + character;
         // the server validates and broadcasts the result to everyone (this node's Name label,
@@ -294,6 +297,12 @@ public partial class Player : CharacterBody3D
         if (!IsInsideTree())
             return;
 
+        // Every copy of a player counts its own protection down: server, owner, remote views and
+        // practice. It used to tick only on the server and in practice, so on an online client
+        // your own character stayed white forever.
+        if (_spawnProtectionRemaining > 0f)
+            _spawnProtectionRemaining = Mathf.Max(0f, _spawnProtectionRemaining - (float)delta);
+
         if (_isServer)
         {
             TickCombatState((float)delta);
@@ -375,11 +384,6 @@ public partial class Player : CharacterBody3D
 
     private void RunOfflinePhysics(double delta)
     {
-        // Practice has no server loop, so the protection timer counts down here. It used to
-        // tick only in RunServerPhysics, so a practice player flashed white forever.
-        if (_spawnProtectionRemaining > 0f)
-            _spawnProtectionRemaining = Mathf.Max(0f, _spawnProtectionRemaining - (float)delta);
-
         if (IsDead) return;
         var worldDir = CameraRelative(ReadMoveInput());
         UpdateFacing(worldDir, (float)delta);
@@ -467,9 +471,6 @@ public partial class Player : CharacterBody3D
 
         var tick = Engine.GetPhysicsFrames();
         Rpc(nameof(ReceiveServerState), tick, GlobalPosition, GlobalRotation.Y);
-
-        if (_spawnProtectionRemaining > 0f)
-            _spawnProtectionRemaining = Mathf.Max(0f, _spawnProtectionRemaining - (float)delta);
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
@@ -611,7 +612,8 @@ public partial class Player : CharacterBody3D
         // Any deliberate action cancels spawn protection immediately (GDD §5.7: "cancelled
         // instantly on attacking"). Dash counts too — using the shimmer window to reposition
         // for free would be the obvious abuse case a playtester would find first.
-        _spawnProtectionRemaining = 0f;
+        if (_spawnProtectionRemaining > 0f)
+            SetSpawnProtection(0f);
 
         switch (verb)
         {
@@ -945,7 +947,7 @@ public partial class Player : CharacterBody3D
         if (spawn is not null)
             GlobalPosition = spawn.GlobalPosition;
 
-        _spawnProtectionRemaining = TuningService.Instance.SpawnProtectionDuration;
+        SetSpawnProtection(TuningService.Instance.SpawnProtectionDuration);
     }
 
     /// <summary>Server-only. Called by MatchServer at the start of every new match: resets
@@ -967,7 +969,24 @@ public partial class Player : CharacterBody3D
         if (spawn is not null)
             GlobalPosition = spawn.GlobalPosition;
 
-        _spawnProtectionRemaining = TuningService.Instance.SpawnProtectionDuration;
+        SetSpawnProtection(TuningService.Instance.SpawnProtectionDuration);
+    }
+
+    /// <summary>Server (or practice): start or cancel spawn protection, and tell every client so
+    /// the shimmer matches what the server enforces.</summary>
+    private void SetSpawnProtection(float seconds)
+    {
+        _spawnProtectionRemaining = seconds;
+        if (_isServer)
+            Rpc(nameof(BroadcastSpawnProtection), seconds);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void BroadcastSpawnProtection(float seconds)
+    {
+        if (Multiplayer.GetRemoteSenderId() != 1)
+            return;
+        _spawnProtectionRemaining = seconds;
     }
 
     // ------------------------------------------------------------------
@@ -1168,6 +1187,8 @@ public partial class Player : CharacterBody3D
 
         _serverPendingYaw = yaw;
         GlobalRotation = new Vector3(GlobalRotation.X, yaw, GlobalRotation.Z);
+        if (_spawnProtectionRemaining > 0f)
+            SetSpawnProtection(0f); // the ability cancels protection on the server too, not just on screen
 
         _ability?.TryActivate();
     }
@@ -1326,11 +1347,19 @@ public partial class Player : CharacterBody3D
             : _spawnProtectionRemaining > 0f ? new Color(1f, 1f, 1f) // white
             : null;
 
+        // Protection pulses at partial strength so the character's texture still shows through;
+        // tells and reveals stay at full strength.
+        var energy = _abilityTellRemaining <= 0f && _revealRemaining <= 0f && _spawnProtectionRemaining > 0f
+            ? 0.25f + 0.35f * (0.5f + 0.5f * Mathf.Sin((float)Time.GetTicksMsec() / 1000f * Mathf.Tau * 3f))
+            : 1f;
         foreach (var material in _bodyMaterials)
         {
             material.EmissionEnabled = color is not null;
             if (color is { } c)
+            {
                 material.Emission = c;
+                material.EmissionEnergyMultiplier = energy;
+            }
         }
     }
 

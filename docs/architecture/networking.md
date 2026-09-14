@@ -119,6 +119,7 @@ every peer.
 
 Anything the player sees about combat is cued by a server broadcast, never by a local key press:
 attack animations (`BroadcastAttackCue`), the stab sound on a landed hit (`BroadcastHitSound`),
+spawn protection start and cancel (`BroadcastSpawnProtection`),
 ability tells, kills, death effects and announcements. A
 press the server rejects never shows a swing that didn't happen.
 

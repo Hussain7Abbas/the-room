@@ -20,7 +20,8 @@ asks to use a verb. The numbers below are the current values in `tuning/tuning.t
 | **Ability** | E | One per character, see [Abilities](abilities.md). |
 
 Health is 100. You respawn after 1.5 s (1.0 s during Last Call), with 1.5 s of spawn protection
-(a white shimmer). Protection ends the moment you use any verb, including dash.
+(a pulsing pale shimmer; the texture stays visible). The server starts and cancels it and tells
+every client, so everyone sees the same shimmer. Protection ends the moment you use any verb, including dash.
 
 ## State machine (per player, server-side)
 
