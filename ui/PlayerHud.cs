@@ -162,13 +162,11 @@ public partial class PlayerHud : CanvasLayer
 
         _ability.Remaining = p.AbilityCooldownRemaining;
         _ability.Total = p.AbilityCooldownTotal;
-        _ability.Key = Keycap("ability");
+        _ability.KeyIcon = InputGlyphs.ActionIcon("ability");
+        _ability.Key = InputGlyphs.ActionName("ability");
         _abilityName.Text = def?.Ability?.DisplayName ?? "";
         _ability.Visible = def?.Ability is not null;
     }
-
-    private static string Keycap(string action) =>
-        SettingsDialog.Bindings(action) is { Count: > 0 } keys ? keys[0] : "?";
 
     private Player? FindLocalPlayer()
     {
@@ -189,6 +187,7 @@ public partial class PlayerHud : CanvasLayer
         public float Remaining { get; set; }
         public float Total { get; set; }
         public string Key { get; set; } = "E";
+        public Texture2D? KeyIcon { get; set; }
 
         public override void _Process(double delta) => QueueRedraw();
 
@@ -228,7 +227,12 @@ public partial class PlayerHud : CanvasLayer
                 : new Color("#34343f");
             DrawStyleBox(border, new Rect2(Vector2.Zero, size));
 
-            // Key badge, bottom-right.
+            // Key badge, bottom-right: the controller button's icon, or the key's name.
+            if (KeyIcon is not null)
+            {
+                DrawTextureRect(KeyIcon, new Rect2(size - new Vector2(25, 25), new Vector2(24, 24)), false);
+                return;
+            }
             var badgeSize = new Vector2(Mathf.Max(18f, 8f + Key.Length * 8f), 16f);
             var badgeRect = new Rect2(size - badgeSize - new Vector2(3, 3), badgeSize);
             var badge = new StyleBoxFlat { BgColor = new Color("#0f0f14"), BorderColor = new Color("#44444f") };

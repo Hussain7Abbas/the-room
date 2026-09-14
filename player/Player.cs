@@ -50,6 +50,9 @@ public partial class Player : CharacterBody3D
     // lunge or kick goes where you aimed instead of curving with your movement.
     private float _aimLockRemaining;
     private const float AimLockSeconds = 0.8f;
+    private bool _faceCentrePending;
+    private const float StickLookSpeed = 3.2f;   // radians/s at full right-stick tilt
+    private const float StickPitchFactor = 0.6f; // vertical look is slower, as in most pad shooters
     private const float TurnRate = 14f; // per second, exponential: most of a turn in ~0.15 s
     private MeshInstance3D? _meshInstance;
     // Everything tinted with the character colour and flashed for tells: the grey-box capsule's
@@ -178,6 +181,7 @@ public partial class Player : CharacterBody3D
         _springArm = GetNode<SpringArm3D>(SpringArmPath);
         _cameraPivot = GetNode<Node3D>("CameraPivot");
         _cameraYaw = GlobalRotation.Y;
+        _faceCentrePending = true;
         // The exported NameLabel was never assigned in Player.tscn, so SetDisplayName() silently
         // did nothing from Phase 0 until the first time anyone actually looked at a rendered frame.
         NameLabel ??= GetNodeOrNull<Label3D>("NameLabel");
@@ -267,26 +271,53 @@ public partial class Player : CharacterBody3D
             return;
 
         if (@event is InputEventMouseMotion mouseMotion && Input.MouseMode == Input.MouseModeEnum.Captured)
+            Look(mouseMotion.Relative.X * MouseSensitivity, mouseMotion.Relative.Y * MouseSensitivity);
+    }
+
+    private void Look(float yawRadians, float pitchRadians)
+    {
+        _cameraYaw -= yawRadians;
+        _pitchRadians = Mathf.Clamp(
+            _pitchRadians - pitchRadians,
+            Mathf.DegToRad(MinPitchDegrees),
+            Mathf.DegToRad(MaxPitchDegrees));
+
+        var armRotation = _springArm.Rotation;
+        armRotation.X = _pitchRadians;
+        _springArm.Rotation = armRotation;
+    }
+
+    /// <summary>Right stick camera and the verbs. Verbs are polled rather than read from events
+    /// because a trigger (RT = heavy) sends a stream of motion events while held; "just pressed"
+    /// fires once for a key, a click or a trigger alike.</summary>
+    private void PollOwnerInput(double delta)
+    {
+        // Spawns are in the perimeter lane. Point the camera at the arena, not the wall behind:
+        // once, when the (possibly still syncing) position has left the origin.
+        if (_faceCentrePending && new Vector2(GlobalPosition.X, GlobalPosition.Z).LengthSquared() > 1f)
         {
-            _cameraYaw -= mouseMotion.Relative.X * MouseSensitivity;
+            _faceCentrePending = false;
+            _cameraYaw = YawFacing(new Vector3(-GlobalPosition.X, 0f, -GlobalPosition.Z).Normalized());
+        }
 
-            _pitchRadians = Mathf.Clamp(
-                _pitchRadians - mouseMotion.Relative.Y * MouseSensitivity,
-                Mathf.DegToRad(MinPitchDegrees),
-                Mathf.DegToRad(MaxPitchDegrees));
+        if (GameMenu.IsOpen)
+            return;
 
-            var armRotation = _springArm.Rotation;
-            armRotation.X = _pitchRadians;
-            _springArm.Rotation = armRotation;
+        var stick = Input.GetVector("look_left", "look_right", "look_up", "look_down");
+        if (stick != Vector2.Zero)
+        {
+            // Squared response: fine aim near the centre, fast turns at full tilt.
+            var step = stick * stick.Length() * StickLookSpeed * (float)delta;
+            Look(step.X, step.Y * StickPitchFactor);
         }
 
         if (IsDead)
             return; // no verbs while dead/in death cam
 
-        if (@event.IsActionPressed("attack_light")) RequestVerbLocal(Verb.Light);
-        if (@event.IsActionPressed("attack_heavy")) RequestVerbLocal(Verb.Heavy);
-        if (@event.IsActionPressed("dodge")) RequestVerbLocal(Verb.Dodge);
-        if (@event.IsActionPressed("ability")) RequestAbilityLocal();
+        if (Input.IsActionJustPressed("attack_light")) RequestVerbLocal(Verb.Light);
+        if (Input.IsActionJustPressed("attack_heavy")) RequestVerbLocal(Verb.Heavy);
+        if (Input.IsActionJustPressed("dodge")) RequestVerbLocal(Verb.Dodge);
+        if (Input.IsActionJustPressed("ability")) RequestAbilityLocal();
     }
 
     public override void _Process(double delta)
@@ -296,6 +327,9 @@ public partial class Player : CharacterBody3D
 
         if (_isBot)
             RunBotAi(delta);
+
+        if (_isOwner && !_isBot)
+            PollOwnerInput(delta);
 
         if (_isOwner && _deathCamRemaining > 0f)
             RunDeathCam(delta);
@@ -871,20 +905,20 @@ public partial class Player : CharacterBody3D
         {
             if (isHeavy)
                 MatchServer.Instance.ServerRegisterHeavyWhiff(_peerId); // Phase 5 award telemetry ("All Bark No Bite")
-            RpcId(_peerId, nameof(ReceiveAttackResult), false, -1L);
+            SendAttackResult(false, -1L);
             return;
         }
 
         var victim = CombatServer.Instance.GetPlayerNode(vId);
         if (victim is null)
         {
-            RpcId(_peerId, nameof(ReceiveAttackResult), false, -1L);
+            SendAttackResult(false, -1L);
             return;
         }
 
         if (victim.IsSpawnProtected)
         {
-            RpcId(_peerId, nameof(ReceiveAttackResult), false, vId);
+            SendAttackResult(false, vId);
             return; // shimmer means shimmer — no damage, no execute, nothing
         }
 
@@ -932,7 +966,7 @@ public partial class Player : CharacterBody3D
         }
 
         CueHitSound(victim.GlobalPosition + Vector3.Up, isHeavy || isExecute);
-        RpcId(_peerId, nameof(ReceiveAttackResult), true, vId);
+        SendAttackResult(true, vId);
     }
 
     /// <summary>Ability shared kit (abilities/Ability.Strike): a melee strike from this player,
@@ -1004,6 +1038,16 @@ public partial class Player : CharacterBody3D
         root.AddChild(sound);
         sound.Finished += sound.QueueFree;
         sound.Play();
+    }
+
+    /// <summary>In practice the attacker is this process, and Godot refuses an RpcId to yourself
+    /// without CallLocal (it logged an error on every whiff), so call it directly.</summary>
+    private void SendAttackResult(bool confirmed, long victimId)
+    {
+        if (_peerId == Multiplayer.GetUniqueId())
+            ReceiveAttackResult(confirmed, victimId);
+        else
+            RpcId(_peerId, nameof(ReceiveAttackResult), confirmed, victimId);
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
@@ -1096,6 +1140,7 @@ public partial class Player : CharacterBody3D
             return;
         _model?.Revive();
         _stamina = TuningService.Instance.MaxStamina;
+        _faceCentrePending = true;
     }
 
     /// <summary>Server-only. Called by MatchServer at the start of every new match: resets

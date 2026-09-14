@@ -31,20 +31,29 @@ Ways to play locally:
 
 ## Controls
 
-| Action | Input |
-|---|---|
-| Move | W A S D |
-| Look (camera) | Mouse. Your character faces the way you move, and turns to the camera when you attack. |
-| Light attack | Left mouse |
-| Heavy attack (lunge) | Right mouse |
-| Dodge (roll, invulnerable while rolling) | Cmd (Mac) / Ctrl |
-| Sprint | Shift (hold) |
-| Jump | Space |
-| Ability | E |
-| Scoreboard | Tab (hold) |
-| Menu (room code, leave) | Esc |
+| Action | Keyboard & mouse | Xbox | PlayStation |
+|---|---|---|---|
+| Move | W A S D | Left stick | Left stick |
+| Look (camera) | Mouse | Right stick | Right stick |
+| Light attack | Left mouse | RB | R1 |
+| Heavy attack (lunge) | Right mouse | RT | R2 |
+| Dodge (roll, invulnerable while rolling) | Cmd (Mac) / Ctrl | B | Circle |
+| Sprint | Shift (hold) | LT (hold) | L2 (hold) |
+| Jump | Space | A | Cross |
+| Ability | E | Y | Triangle |
+| Scoreboard | Tab (hold) | View | Create |
+| Menu (room code, leave) | Esc | Menu | Options |
 
-The same list is in the game under **Settings → Controls**. **Settings → Display** switches
+Your character faces the way you move, and turns to the camera when you attack.
+
+**Controllers:** plug in (or pair) an Xbox or PlayStation controller and press any button. The
+game switches to it, and menus and the HUD show that controller's button icons; press a key or
+click to switch back. The menus work with the D-pad or stick and A / Cross. Other controllers
+work too and show Xbox icons.
+
+The same list is in the game under **Settings → Controls**, where you can **rebind** it: the tab
+shows the device you're using, so rebinding with the keyboard changes keyboard keys and with a
+controller changes controller buttons (movement and camera stay on the sticks). **Settings → Display** switches
 between Maximized (the default), Windowed and Fullscreen.
 
 ## Command-line flags

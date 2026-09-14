@@ -18,8 +18,11 @@
 - `UiTheme.cs`: the single theme (colours, styleboxes, type variations `AccentButton`,
   `NavButton`, `GhostButton`, `Card`, `Muted`, `Heading`, `Title`) and small builders.
 - `ModalDialog.cs`: base popup (dim background, title, Close, Esc closes it first).
-  `SettingsDialog.cs` has the Display tab (display mode) and the Controls tab (bindings read live
-  from the InputMap, with layout-aware key names). `AboutDialog.cs` has the description,
+  `SettingsDialog.cs` has the Display tab (display mode) and the Controls tab: the bindings of
+  the device in use (`core/InputDevices`), rebindable (`core/InputBindings`), rebuilt when the
+  device changes. `InputGlyphs.cs` turns a binding into a key cap (layout-aware key name) or a
+  controller icon (Kenney CC0 prompts in `assets/ui/input/{xbox,playstation}/`); use it anywhere
+  a binding is shown (the HUD's ability badge does). `AboutDialog.cs` has the description,
   © Voidra Team and the org link. Both open from the main menu, and Settings also opens from the
   Esc menu.
 - `PlayerHud.cs` + `HudBar.cs` (in `core/Main.tscn`): the top-left HUD with health (and the
@@ -40,4 +43,8 @@
 - Disable actions while a request is in flight (`SetBusy`), so double clicks can't race.
 - The layout must fit the default 1152×648 window with no horizontal scrollbars. **Render and
   look** after layout changes: movie writer with `--menu-page=…` (see `docs/testing.md`).
+- Controller support: while a controller is active, `InputDevices` makes every `Button`
+  focusable and keeps something focused, so screens need no per-screen gamepad code. Buttons
+  stay `FocusMode.None` for the mouse (no focus rings). Open/close with `pause_menu` (Esc or
+  Start), never `ui_cancel` alone: the pad's B is also the dodge.
 - The default font lacks many symbols (▶ ★ ●). Stick to Latin plus `• · « » ‹ › —`.

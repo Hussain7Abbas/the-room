@@ -52,7 +52,7 @@ public partial class ModalDialog : Control
     public override void _UnhandledInput(InputEvent @event)
     {
         // The dialog sits deeper in the tree than whatever opened it, so it sees Esc first.
-        if (!@event.IsActionPressed("ui_cancel"))
+        if (!@event.IsActionPressed("ui_cancel") && !@event.IsActionPressed("pause_menu"))
             return;
         Close();
         GetViewport().SetInputAsHandled();

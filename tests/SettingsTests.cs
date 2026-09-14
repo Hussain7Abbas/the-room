@@ -25,12 +25,55 @@ public class SettingsTests : TestClass
     [Test]
     public void EveryListedActionHasABinding()
     {
-        foreach (var action in new[] { "move_forward", "move_back", "move_left", "move_right", "jump", "sprint", "dodge",
-                     "attack_light", "attack_heavy", "ability", "scoreboard" })
+        foreach (var action in InputBindings.Actions)
         {
-            SettingsDialog.Bindings(action).ShouldNotBeEmpty($"action {action}");
+            InputBindings.EventsFor(action, InputBindings.Kind.Keyboard).ShouldNotBeEmpty($"keyboard {action}");
+            InputBindings.EventsFor(action, InputBindings.Kind.Controller).ShouldNotBeEmpty($"controller {action}");
         }
-        SettingsDialog.Bindings("attack_light").ShouldContain("Left mouse");
+        foreach (var action in new[] { "look_left", "look_right", "look_up", "look_down", "pause_menu" })
+            InputMap.HasAction(action).ShouldBeTrue(action);
+        InputGlyphs.Name(InputBindings.EventsFor("attack_light", InputBindings.Kind.Keyboard)[0]).ShouldBe("Left mouse");
+        InputGlyphs.Icon(InputBindings.EventsFor("jump", InputBindings.Kind.Controller)[0]).ShouldNotBeNull();
+    }
+
+    /// <summary>Rebinding to an input another action uses swaps the two; the other device's
+    /// bindings are untouched; reset restores project.godot's; all of it survives a reload.</summary>
+    [Test]
+    public void RebindSwapsSavesAndResets()
+    {
+        var realFile = GameSettings.FilePath;
+        GameSettings.FilePath = "user://settings-rebind-test.cfg";
+        try
+        {
+            string First(string action, InputBindings.Kind kind) =>
+                InputBindings.Serialize(InputBindings.EventsFor(action, kind)[0]);
+            var jumpKey = First("jump", InputBindings.Kind.Keyboard);
+            var abilityKey = First("ability", InputBindings.Kind.Keyboard);
+            var jumpPad = First("jump", InputBindings.Kind.Controller);
+
+            InputBindings.Rebind("jump", InputBindings.Kind.Keyboard, InputBindings.Parse(abilityKey)!);
+            First("jump", InputBindings.Kind.Keyboard).ShouldBe(abilityKey);
+            First("ability", InputBindings.Kind.Keyboard).ShouldBe(jumpKey);
+            First("jump", InputBindings.Kind.Controller).ShouldBe(jumpPad);
+
+            InputMap.LoadFromProjectSettings();
+            InputBindings.ApplySaved();
+            First("jump", InputBindings.Kind.Keyboard).ShouldBe(abilityKey);
+
+            InputBindings.Rebind("dodge", InputBindings.Kind.Controller, InputBindings.Parse("joyaxis:4:1")!);
+            First("sprint", InputBindings.Kind.Controller).ShouldBe("joybutton:1"); // swapped with dodge's B
+
+            InputBindings.ResetToDefaults(InputBindings.Kind.Keyboard);
+            First("jump", InputBindings.Kind.Keyboard).ShouldBe(jumpKey);
+            First("dodge", InputBindings.Kind.Controller).ShouldBe("joyaxis:4:1"); // controller kept
+        }
+        finally
+        {
+            DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(GameSettings.FilePath));
+            GameSettings.FilePath = realFile;
+            InputMap.LoadFromProjectSettings();
+            InputBindings.ApplySaved();
+        }
     }
 
     [Test]

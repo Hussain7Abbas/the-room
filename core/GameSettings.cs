@@ -9,7 +9,8 @@ namespace TheRoom.Core;
 /// </summary>
 public static class GameSettings
 {
-    public const string FilePath = "user://settings.cfg";
+    /// <summary>Settable only so tests can use a scratch file instead of the player's.</summary>
+    public static string FilePath { get; set; } = "user://settings.cfg";
 
     public enum DisplayMode { Maximized, Windowed, Fullscreen }
 

@@ -18,6 +18,11 @@ them anyway.
 | Namaqualand Boulder 02, 04 | `assets/props/polyhaven/namaqualand_boulder_0*` |
 | Worn Asphalt, Cobblestone Square, Preconcrete Wall 001, Rusty Metal 02 (textures) | `assets/environment/textures/` |
 
+## Controller button icons (Kenney, CC0)
+
+[Input Prompts](https://kenney.nl/assets/input-prompts) by Kenney, CC0. The Xbox and PlayStation
+icons we use are in `assets/ui/input/` (license in `LICENSE-kenney.txt`).
+
 ## Characters
 
 - Character model and animations from [Mixamo](https://www.mixamo.com).

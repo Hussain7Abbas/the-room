@@ -31,7 +31,7 @@
 - **Dodge** is the one verb the owner predicts: `RequestVerbLocal` starts the roll locally
   (`StartDodge(predicted: true)`) and the server runs it for real. `IsDodging` hides the hitbox
   in `CombatServer`. There is no parry and no dash any more.
-- **Sprint** is Shift held, sent every tick in `SubmitInput` and applied in `SimulateStep`.
+- **Sprint** is Shift (or LT) held, sent every tick in `SubmitInput` and applied in `SimulateStep`.
 - **Stamina** (`UpdateStamina`, `SpendStamina`) gates sprint and dodge. It runs in `SimulateStep`,
   on the server (authoritative) and on the owner (predicted). `ReceiveServerState` carries health
   and stamina; the owner snaps its stamina only when it drifts by more than 12.
@@ -48,6 +48,11 @@
 - **Timers that drive visuals count down on every copy** (top of `_PhysicsProcess`), and the server
   sets and cancels them with a broadcast (`SetSpawnProtection`). A timer that only ticks on the
   server leaves clients stuck: the "white character" bug.
+- Owner input: mouse look in `_UnhandledInput`; right-stick look and the verbs are polled in
+  `PollOwnerInput` (`Input.IsActionJustPressed`), because a trigger bound to a verb sends a
+  stream of motion events. Add new verbs there, never as event checks.
+- The owner's camera turns to face the arena centre once after spawning and after every revive
+  (`_faceCentrePending`); spawns are in the perimeter lane facing inward.
 - Local input is ignored while `GameMenu.IsOpen`. Esc belongs to `ui/GameMenu`, not Player.
 - Identity (name + character) syncs with `AnnounceIdentity` / `ReceiveIdentity`, plus
   `RequestIdentity` for late joiners. MultiplayerSpawner doesn't replicate properties changed

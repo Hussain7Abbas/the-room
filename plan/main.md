@@ -120,3 +120,8 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
   - CC0 Poly Haven props and textures (see `CREDITS.md`); box colliders only.
   - Zones: plaza with the Golden Knife, 4 avenues, crate yard, barrier maze, boulder field, depot deck; 16 spawns in the perimeter lane.
   - Bots wander by `Main.ArenaHalfExtent`. `make deploy-server` now runs `godot --import` on the server.
+- 2026-09-15 — Controllers (Xbox, PlayStation) and rebinding:
+  - `core/InputDevices` autoload: any controller button switches to it (PlayStation by SDL name, others Xbox), any key/click switches back. Buttons become focusable while a pad is active so menus work with the D-pad.
+  - Default pad bindings in project.godot (left stick move, right stick look, RB/RT light/heavy, B dodge, LT sprint, A jump, Y ability, View scoreboard, Start menu via new `pause_menu`).
+  - Settings → Controls shows and rebinds the current device's bindings (`core/InputBindings`, swaps on conflict, per-device reset, saved in settings.cfg). Kenney CC0 button icons (`ui/InputGlyphs`), also on the HUD ability badge.
+  - Verbs are polled (triggers stream events). Camera faces the centre after spawn/revive. Practice whiffs no longer log an RpcId-to-self error.

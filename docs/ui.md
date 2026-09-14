@@ -14,7 +14,7 @@ theme resources.
 | **Match history** | Paginated table (when, room, winner, length, players). The newest match on the page opens in the details panel: full scoreboard (rank, player, character, points, kills, deaths), MVP and awards. **Only my matches** filters by your name. |
 | **Leaderboard** | Season standings, paginated: matches, wins, win %, K/D, kills, best score. Top 3 in gold, your row highlighted. |
 | Practice alone | Offline, with no server. |
-| **Settings** | A dialog with two tabs. **Display:** "Display Mode" is Maximized (the default), Windowed or Fullscreen; it applies immediately, is saved, and is re-applied at every launch. **Controls:** every action and its current key, read live from the input map and shown with your keyboard layout's key names. Rebinding isn't available yet. |
+| **Settings** | A dialog with two tabs. **Display:** "Display Mode" is Maximized (the default), Windowed or Fullscreen; it applies immediately, is saved, and is re-applied at every launch. **Controls:** the bindings of the device you're using: keyboard and mouse (with your layout's key names) or the controller (Xbox or PlayStation button icons). Click or select a binding, then press the new key or button; one already in use swaps with the old one. **Reset to defaults** resets that device only. Esc / Start cancels. |
 | **About** | What the game is, "© 2026 Voidra Team", and a link to [github.com/Voidra-iq](https://github.com/Voidra-iq). |
 | Status line | Whether the lobby is reachable, and how many rooms and players there are. |
 | Notices | Errors (red, 12 s) and confirmations (green, 5 s) float at the bottom centre. Disconnect reasons from the last session show here too. |

@@ -8,6 +8,7 @@
 
 | Autoload | File | Role |
 |---|---|---|
+| `InputDevices` | `InputDevices.cs` | Current device (keyboard / Xbox / PlayStation, switched by any press), applies saved bindings (`InputBindings.cs`), gamepad focus for menus |
 | `Events` | `Events.cs` | Signal bus: PlayerConnected/Disconnected/Spawned/Killed, MatchAnnouncement |
 | `Tuning` | `TuningService.cs` | Loads `tuning/tuning.tres` |
 | `Net` | `Net.cs` | Session state machine (None / Offline / Server / Client), ENet, CLI flags, scene switching |
@@ -18,7 +19,8 @@
 | `RoomReporter` | `RoomReporter.cs` | Lobby rooms only: heartbeat every 5 s and the match report on match end |
 
 Not autoloads: `Main.cs`/`Main.tscn` (the game scene), `KillfeedUI`, `DebugOverlay`, `LobbyApi.cs`
-(the menu's static HTTP client), and `GameSettings.cs` (`user://settings.cfg`: always
+(the menu's static HTTP client), `InputBindings.cs` (rebinding: `[bindings_keyboard]` and
+`[bindings_controller]` in settings.cfg over project.godot's defaults), and `GameSettings.cs` (`user://settings.cfg`: always
 load → change → save, so no section wipes another; display mode is applied at menu start and
 skipped when headless or movie-writing).
 

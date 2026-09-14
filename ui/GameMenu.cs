@@ -145,7 +145,10 @@ public partial class GameMenu : CanvasLayer
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (!@event.IsActionPressed("ui_cancel") || _connecting.Visible)
+        // pause_menu is Esc or the controller's Start/Options. ui_cancel (which includes the pad's
+        // B/Circle, the dodge button) may only close the menu, never open it mid-fight.
+        var toggle = @event.IsActionPressed("pause_menu") || (IsOpen && @event.IsActionPressed("ui_cancel"));
+        if (!toggle || _connecting.Visible)
             return;
         SetOpen(!IsOpen);
         GetViewport().SetInputAsHandled();

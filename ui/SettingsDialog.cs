@@ -9,7 +9,8 @@ namespace TheRoom.UI;
 /// Settings, opened from the main menu and the in-game Esc menu.
 ///   Display: Display Mode (Maximized by default, Windowed, Fullscreen). It applies immediately and
 ///            is saved, and MainMenu re-applies it at every launch (core/GameSettings.cs).
-///   Controls: every action's current binding, read live from the InputMap (project.godot).
+///   Controls: the bindings of the device in use (keyboard and mouse, or an Xbox/PlayStation
+///             controller with its button icons), rebindable (core/InputBindings.cs).
 /// </summary>
 public partial class SettingsDialog : ModalDialog
 {
@@ -51,6 +52,9 @@ public partial class SettingsDialog : ModalDialog
     };
 
     private readonly Dictionary<Tab, Button> _tabs = new();
+    private readonly Dictionary<string, Button> _bindButtons = new();
+    private VBoxContainer _controls = null!;
+    private (string Action, InputBindings.Kind Kind, Button Button, ulong StartedAt)? _capture;
     private readonly Dictionary<Tab, Control> _pages = new();
 
     public SettingsDialog() : this(Tab.Display) { }
@@ -111,72 +115,203 @@ public partial class SettingsDialog : ModalDialog
         return page;
     }
 
-    private static Control BuildControlsPage()
+    private Control BuildControlsPage()
     {
+        _controls = new VBoxContainer { CustomMinimumSize = new Vector2(0, 360) };
+        _controls.AddThemeConstantOverride("separation", 8);
+        RebuildControls();
+        InputDevices.Changed += OnDeviceChanged;
+        return _controls;
+    }
+
+    public override void _ExitTree() => InputDevices.Changed -= OnDeviceChanged;
+
+    private void OnDeviceChanged()
+    {
+        _capture = null;
+        RebuildControls();
+    }
+
+    /// <summary>The Controls tab shows (and rebinds) the device in use: keyboard and mouse, or the
+    /// controller, with its Xbox or PlayStation icons. Touching the other device swaps it.</summary>
+    private void RebuildControls(string? focusAction = null)
+    {
+        foreach (var child in _controls.GetChildren())
+            child.QueueFree();
+        _bindButtons.Clear();
+        var kind = InputBindings.KindOf(InputDevices.Current);
+
+        var header = new HBoxContainer();
+        header.AddThemeConstantOverride("separation", 12);
+        var headerText = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        headerText.AddChild(UiTheme.Label(InputDevices.Current switch
+        {
+            InputDevice.Xbox => "Xbox controller",
+            InputDevice.PlayStation => "PlayStation controller",
+            _ => "Keyboard & mouse",
+        }, fontSize: 17));
+        var hint = UiTheme.Label(kind == InputBindings.Kind.Keyboard
+            ? "Click a binding, then press the new key or mouse button (Esc cancels). Press any controller button to see the controller's."
+            : "Select a binding, then press the new button (Start / Options cancels). Press any key to see the keyboard's.", "Muted", fontSize: 12);
+        hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        headerText.AddChild(hint);
+        header.AddChild(headerText);
+        var reset = UiTheme.Button("Reset to defaults", "GhostButton", () =>
+        {
+            InputBindings.ResetToDefaults(kind);
+            RebuildControls();
+        });
+        reset.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        header.AddChild(reset);
+        _controls.AddChild(header);
+
         var scroll = new ScrollContainer
         {
-            CustomMinimumSize = new Vector2(0, 360),
+            SizeFlagsVertical = SizeFlags.ExpandFill,
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
         };
         var list = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         list.AddThemeConstantOverride("separation", 6);
         scroll.AddChild(list);
+        _controls.AddChild(scroll);
 
         foreach (var (groupName, rows) in Controls)
         {
             list.AddChild(UiTheme.Label(groupName, "Muted", fontSize: 12));
             foreach (var (label, action, fixedBinding) in rows)
             {
-                var row = new HBoxContainer();
+                var row = new HBoxContainer { CustomMinimumSize = new Vector2(0, 38) };
                 var name = UiTheme.Label(label);
                 name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
                 row.AddChild(name);
-                var keys = fixedBinding is not null ? new List<string> { fixedBinding } : Bindings(action!);
-                foreach (var key in keys.DefaultIfEmpty("Not bound"))
-                    row.AddChild(KeyCap(key));
+                if (action is not null && InputBindings.IsRebindable(action, kind))
+                    row.AddChild(BindButton(action, kind));
+                else if (action is not null)
+                    row.AddChild(InputGlyphs.ForAction(action));
+                else
+                    row.AddChild(FixedGlyph(fixedBinding!, kind));
                 list.AddChild(row);
             }
             list.AddChild(new Control { CustomMinimumSize = new Vector2(0, 6) });
         }
 
-        var note = UiTheme.Label("Keys follow your keyboard layout. Rebinding isn't available yet.", "Muted", fontSize: 12);
+        var note = UiTheme.Label(kind == InputBindings.Kind.Keyboard
+            ? "Keys follow your keyboard layout. A key already in use swaps with the old one."
+            : "Movement is the left stick and the camera the right stick. A button already in use swaps with the old one.",
+            "Muted", fontSize: 12);
         note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         list.AddChild(note);
-        return scroll;
+
+        if (focusAction is not null && InputDevices.IsGamepad && _bindButtons.TryGetValue(focusAction, out var again))
+            again.CallDeferred(Control.MethodName.GrabFocus);
     }
 
-    private static PanelContainer KeyCap(string text)
+    private Button BindButton(string action, InputBindings.Kind kind)
     {
-        var cap = new PanelContainer { ThemeTypeVariation = "KeyCap" };
-        cap.AddChild(UiTheme.Label(text, fontSize: 14));
-        return cap;
-    }
-
-    /// <summary>Human names of everything bound to an action, e.g. "W", "Space", "Left mouse".</summary>
-    public static List<string> Bindings(string action) =>
-        InputMap.HasAction(action) ? InputMap.ActionGetEvents(action).Select(Describe).ToList() : new List<string>();
-
-    private static string Describe(InputEvent e) => e switch
-    {
-        InputEventKey { PhysicalKeycode: Key.Meta } => OS.GetName() == "macOS" ? "Cmd" : "Win",
-        InputEventKey key => OS.GetKeycodeString(LayoutKey(key)),
-        InputEventMouseButton mouse => mouse.ButtonIndex switch
+        var button = new Button
         {
-            MouseButton.Left => "Left mouse",
-            MouseButton.Right => "Right mouse",
-            MouseButton.Middle => "Middle mouse",
-            _ => $"Mouse {(int)mouse.ButtonIndex}",
-        },
-        _ => e.AsText(),
-    };
+            CustomMinimumSize = new Vector2(170, 36),
+            IconAlignment = HorizontalAlignment.Center,
+            FocusMode = InputDevices.IsGamepad ? FocusModeEnum.All : FocusModeEnum.None,
+        };
+        button.AddThemeConstantOverride("icon_max_width", 28);
+        ShowBinding(button, action, kind);
+        button.Pressed += () =>
+        {
+            if (_capture is { } previous)
+                ShowBinding(previous.Button, previous.Action, previous.Kind);
+            _capture = (action, kind, button, Time.GetTicksMsec());
+            button.Icon = null;
+            button.Text = kind == InputBindings.Kind.Keyboard ? "Press a key…" : "Press a button…";
+        };
+        _bindButtons[action] = button;
+        return button;
+    }
 
-    /// <summary>Bindings are physical keys (the key's position). Show what that key is labelled on
-    /// this player's layout: the W position reads "Z" on AZERTY.</summary>
-    private static Key LayoutKey(InputEventKey key)
+    private static void ShowBinding(Button button, string action, InputBindings.Kind kind)
     {
-        if (key.PhysicalKeycode == Key.None)
-            return key.Keycode;
-        var local = DisplayServer.KeyboardGetKeycodeFromPhysical(key.PhysicalKeycode);
-        return local == Key.None ? key.PhysicalKeycode : local;
+        var events = InputBindings.EventsFor(action, kind);
+        var icon = events.Count > 0 ? InputGlyphs.Icon(events[0]) : null;
+        button.Icon = icon;
+        button.Text = icon is not null ? "" : events.Count == 0 ? "Not bound" : string.Join("  /  ", events.Select(InputGlyphs.Name));
+    }
+
+    private static Control FixedGlyph(string text, InputBindings.Kind kind)
+    {
+        if (kind == InputBindings.Kind.Controller)
+        {
+            var icon = InputGlyphs.Named(text == "Mouse" ? "stick_r" : "start");
+            if (icon is not null)
+                return InputGlyphs.IconRect(icon, 30);
+        }
+        return InputGlyphs.KeyCap(text);
+    }
+
+    /// <summary>While a binding waits for its new input, take the next matching press before
+    /// anything else sees it (so Esc doesn't close the dialog and a click doesn't press a button).
+    /// A press from the other kind of device isn't taken: it switches the tab to that device.</summary>
+    public override void _Input(InputEvent @event)
+    {
+        if (_capture is not { } capture)
+            return;
+        if (Time.GetTicksMsec() - capture.StartedAt < 150)
+        {
+            if (@event.IsPressed())
+                GetViewport().SetInputAsHandled(); // the press that opened the capture
+            return;
+        }
+
+        InputEvent? bound = null;
+        var cancel = false;
+        if (capture.Kind == InputBindings.Kind.Keyboard)
+        {
+            switch (@event)
+            {
+                case InputEventKey { Pressed: true, Echo: false } key:
+                    if (key.PhysicalKeycode == Key.Escape || key.Keycode == Key.Escape)
+                        cancel = true;
+                    else
+                        bound = new InputEventKey { PhysicalKeycode = key.PhysicalKeycode != Key.None ? key.PhysicalKeycode : key.Keycode, Device = -1 };
+                    break;
+                case InputEventMouseButton { Pressed: true } mouse
+                    when mouse.ButtonIndex is MouseButton.Left or MouseButton.Right or MouseButton.Middle or MouseButton.Xbutton1 or MouseButton.Xbutton2:
+                    bound = new InputEventMouseButton { ButtonIndex = mouse.ButtonIndex, Device = -1 };
+                    break;
+                case InputEventKey or InputEventMouseButton:
+                    break;
+                default:
+                    return;
+            }
+        }
+        else
+        {
+            switch (@event)
+            {
+                case InputEventJoypadButton { Pressed: true } pad:
+                    if (pad.ButtonIndex == JoyButton.Start)
+                        cancel = true;
+                    else if (pad.ButtonIndex != JoyButton.Guide)
+                        bound = new InputEventJoypadButton { ButtonIndex = pad.ButtonIndex, Device = -1 };
+                    break;
+                case InputEventJoypadMotion { Axis: JoyAxis.TriggerLeft or JoyAxis.TriggerRight } trigger when trigger.AxisValue > 0.6f:
+                    bound = new InputEventJoypadMotion { Axis = trigger.Axis, AxisValue = 1f, Device = -1 };
+                    break;
+                case InputEventJoypadButton or InputEventJoypadMotion:
+                    break;
+                case InputEventKey { Pressed: true, Keycode: Key.Escape }:
+                    cancel = true;
+                    break;
+                default:
+                    return;
+            }
+        }
+
+        GetViewport().SetInputAsHandled();
+        if (!cancel && bound is null)
+            return;
+        _capture = null;
+        if (bound is not null)
+            InputBindings.Rebind(capture.Action, capture.Kind, bound);
+        RebuildControls(capture.Action);
     }
 }
