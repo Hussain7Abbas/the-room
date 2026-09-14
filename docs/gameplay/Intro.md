@@ -16,6 +16,7 @@ Knife and Last Call.
 
 - [Combat](combat.md): the verbs (light, heavy, execute, dodge, sprint, jump) and how they beat each other.
 - [Abilities](abilities.md): the one-ability-per-character grammar, the current abilities, and how to add one.
+- [Arena](arena.md): the map, its zones, and how to change it.
 - [Tuning](tuning.md): every number above lives in one file. How to change it safely.
 
 Controls are listed in [Getting started](../getting-started.md#controls).

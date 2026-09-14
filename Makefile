@@ -20,6 +20,7 @@ export PATH := $(DOTNET_DIR):$(PATH)
 
 # Godot 4.7 mono editor/runtime (macOS app bundle).
 GODOT := /Applications/Godot_mono.app/Contents/MacOS/Godot
+DEPLOY_GODOT := /opt/the-room/godot-app/Godot_v4.7.2-stable_mono_linux_x86_64/Godot_v4.7.2-stable_mono_linux.x86_64
 
 SLN     := The Room.sln
 PORT      ?= 60010
@@ -183,6 +184,7 @@ deploy-server:
 		chown -R $(DEPLOY_USER):$(DEPLOY_USER) "$(DEPLOY_PATH)" /opt/the-room/data /opt/the-room/lobby && \
 		sudo -u $(DEPLOY_USER) bash -c "export PATH=/opt/the-room/dotnet:\$$PATH DOTNET_ROOT=/opt/the-room/dotnet; cd $(DEPLOY_PATH) && \
 			dotnet build \"The Room.sln\" && \
+			$(DEPLOY_GODOT) --headless --path . --import >/dev/null 2>&1 && \
 			dotnet publish services/lobby/Lobby.csproj -c Release -o /opt/the-room/lobby"'
 	@echo "$(GREEN)Installing $(DEPLOY_SERVICE)...$(RESET)"
 	@ssh "$(DEPLOY_HOST)" '\

@@ -20,6 +20,7 @@ code: see "Keeping docs current" below.
 | [Gameplay](gameplay/Intro.md) | the rules players experience |
 | ├ [Combat](gameplay/combat.md) | light, heavy, execute, dodge, sprint, jump |
 | ├ [Abilities](gameplay/abilities.md) | the ability grammar and adding an ability |
+| ├ [Arena](gameplay/arena.md) | the map's zones, props and generator |
 | └ [Tuning](gameplay/tuning.md) | where every gameplay number lives and how to change it |
 | [Characters & animation](characters/Intro.md) | the character pipeline |
 | ├ [Adding a character](characters/adding-a-character.md) | a new model, step by step |

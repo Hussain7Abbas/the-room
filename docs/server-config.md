@@ -142,11 +142,14 @@ sudo -u theroom bash -c '
   export PATH=/opt/the-room/dotnet:$PATH DOTNET_ROOT=/opt/the-room/dotnet
   cd /opt/the-room/app &&
   dotnet build "The Room.sln" &&
+  /opt/the-room/godot-app/Godot_v4.7.2-stable_mono_linux_x86_64/Godot_v4.7.2-stable_mono_linux.x86_64 \
+    --headless --path . --import &&
   dotnet publish services/lobby/Lobby.csproj -c Release -o /opt/the-room/lobby'
 ```
 
 `dotnet build` compiles the game's C# into `.godot/mono`, which the headless room servers load.
-Rebuild after every code update.
+`--import` imports the arena's models and textures into `.godot/imported`; without it a room
+fails to load `maps/arena/Arena.tscn`. Do both after every update (`make deploy-server` does).
 
 ## 9. The lobby service (systemd)
 

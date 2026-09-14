@@ -33,8 +33,10 @@ make deploy-nginx    # only when deploy/nginx/room-api.iscoded.com.conf changed
 1. It **rsyncs** the repo to `/opt/the-room/app` with `--delete`. It excludes `.git`, `.godot`,
    `bin`, `obj`, `build`, `.lobby`, `*.db` and `season_stats.json`, so server-side data is never
    overwritten.
-2. As `theroom`, it runs `dotnet build "The Room.sln"` and `dotnet publish services/lobby -c
-   Release -o /opt/the-room/lobby`.
+2. As `theroom`, it runs `dotnet build "The Room.sln"`, then `godot --headless --import` (the
+   arena's props and textures must be imported before a room server can load them; `.godot` is
+   never rsynced, so the server imports its own), then `dotnet publish services/lobby -c Release
+   -o /opt/the-room/lobby`.
 3. It installs `deploy/systemd/the-room-lobby.service` and runs `daemon-reload`. The first time,
    it also retires the old `the-room-server.service`.
 4. It restarts `the-room-lobby`, waits for `/api/health`, and prints `active` plus

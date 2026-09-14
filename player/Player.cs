@@ -394,7 +394,7 @@ public partial class Player : CharacterBody3D
         // Root cause of the Phase 1 "some players fall through the floor" flake, found by
         // rendering real frames: spawn markers sat at Y=0 (floor level), so every capsule spawned
         // half-inside the floor's CSG trimesh collider, which Jolt can depenetrate either way.
-        // Markers are now at Y=1 (maps/room/Room.tscn). This stays as a permanent "void"
+        // Markers are now at Y=1 (the arena's SpawnPoints). This stays as a permanent "void"
         // feature for any map, and logs so falls are countable in headless tests.
         if (GlobalPosition.Y < TuningService.Instance.VoidCatchY)
         {
@@ -1531,8 +1531,9 @@ public partial class Player : CharacterBody3D
 
     private void PickNewBotTarget()
     {
-        var x = (float)GD.RandRange(-16.0, 16.0);
-        var z = (float)GD.RandRange(-16.0, 16.0);
+        var reach = Mathf.Max(4f, Main.ArenaHalfExtent - 4f); // anywhere on the map, away from the walls
+        var x = (float)GD.RandRange(-reach, reach);
+        var z = (float)GD.RandRange(-reach, reach);
         _botTarget = new Vector3(x, GlobalPosition.Y, z);
         _botRetargetIn = GD.RandRange(2.0, 5.0);
     }

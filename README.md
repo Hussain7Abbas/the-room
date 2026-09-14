@@ -89,6 +89,7 @@ See [`plan/main.md`](plan/main.md) for phase-by-phase status.
 Made by the **Voidra** team.
 
 - Character model and animations from [Mixamo](https://www.mixamo.com).
+- Arena props and textures from [Poly Haven](https://polyhaven.com) (CC0). See [CREDITS.md](CREDITS.md).
 - Built with [Godot Engine](https://godotengine.org).
 
 ## License
