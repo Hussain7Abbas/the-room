@@ -98,6 +98,32 @@ public static class UiTheme
         t.SetStylebox("pressed", "GhostButton", Box(new Color("#1a1a21"), padX: 10, padY: 6));
         t.SetStylebox("disabled", "GhostButton", Box(Colors.Transparent, padX: 10, padY: 6));
 
+        // Tabs inside dialogs: flat, with a red underline on the selected one.
+        t.SetTypeVariation("TabButton", "Button");
+        var tabNormal = Box(Colors.Transparent, radius: 0, padX: 16, padY: 8);
+        var tabSelected = Box(Colors.Transparent, radius: 0, padX: 16, padY: 8);
+        tabSelected.BorderColor = Accent;
+        tabSelected.BorderWidthBottom = 3;
+        t.SetStylebox("normal", "TabButton", tabNormal);
+        t.SetStylebox("hover", "TabButton", Box(new Color(1, 1, 1, 0.04f), radius: 0, padX: 16, padY: 8));
+        t.SetStylebox("pressed", "TabButton", tabSelected);
+        t.SetStylebox("hover_pressed", "TabButton", tabSelected);
+        t.SetStylebox("focus", "TabButton", new StyleBoxEmpty());
+        t.SetColor("font_color", "TabButton", Muted);
+        t.SetColor("font_pressed_color", "TabButton", Text);
+        t.SetColor("font_hover_pressed_color", "TabButton", Text);
+        t.SetFontSize("font_size", "TabButton", 17);
+
+        // A key on a keyboard, for the controls list.
+        t.SetTypeVariation("KeyCap", "PanelContainer");
+        var keyCap = Box(new Color("#121218"), radius: 5, border: new Color("#44444f"), borderWidth: 1, padX: 10, padY: 3);
+        keyCap.BorderWidthBottom = 3;
+        t.SetStylebox("panel", "KeyCap", keyCap);
+
+        t.SetColor("font_color", "LinkButton", AccentHover);
+        t.SetColor("font_hover_color", "LinkButton", Gold);
+        t.SetColor("font_pressed_color", "LinkButton", Gold);
+
         // Panels.
         t.SetStylebox("panel", "PanelContainer", Box(Panel, radius: 10, border: Border, borderWidth: 1, padX: 20, padY: 18));
         t.SetTypeVariation("Card", "PanelContainer");

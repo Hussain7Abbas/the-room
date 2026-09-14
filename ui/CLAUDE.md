@@ -11,11 +11,17 @@
   - Match history: paginated, with a details panel;
   - Leaderboard: paginated;
   - Practice and Quit.
-  - `--menu-page=history|leaderboard` opens a specific page (used for screenshots and tests).
+  - `--menu-page=history|leaderboard` opens a specific page, and `--menu-open=settings|controls|about`
+    opens a dialog (used for screenshots and tests).
 - `GameMenu.cs` is added to `core/Main.tscn`, clients only. It shows the "Connecting…" overlay
   (12 s timeout) and the Esc menu (room name and code, Resume, Leave). It exposes `GameMenu.IsOpen`.
 - `UiTheme.cs`: the single theme (colours, styleboxes, type variations `AccentButton`,
   `NavButton`, `GhostButton`, `Card`, `Muted`, `Heading`, `Title`) and small builders.
+- `ModalDialog.cs`: base popup (dim background, title, Close, Esc closes it first).
+  `SettingsDialog.cs` has the Display tab (display mode) and the Controls tab (bindings read live
+  from the InputMap, with layout-aware key names). `AboutDialog.cs` has the description,
+  © Voidra Team and the org link. Both open from the main menu, and Settings also opens from the
+  Esc menu.
 - `PaginationBar.cs`: reusable pager. It raises `PageRequested(page, size)`; call `SetPage` with
   what the server returned.
 

@@ -44,6 +44,9 @@ Ways to play locally:
 | Scoreboard | Tab (hold) |
 | Menu (room code, leave) | Esc |
 
+The same list is in the game under **Settings → Controls**. **Settings → Display** switches
+between Maximized (the default), Windowed and Fullscreen.
+
 ## Command-line flags
 
 Godot's own flags come first; the game's flags go **after a literal `--`**:
@@ -66,6 +69,7 @@ godot --path . -- --connect=room-udp.iscoded.com --port=60010 --name=Ana --chara
 | `--room-code`, `--room-name`, `--lobby-url`, `--room-token` | server | Set by the lobby when it starts a room. Don't pass them by hand. |
 | `--api=<url>` | client | Lobby base URL (default `https://room-api.iscoded.com`). |
 | `--menu-page=history\|leaderboard` | client | Open the menu on that page (screenshots, tests). |
+| `--menu-open=settings\|controls\|about` | client | Open that dialog on top of the menu (screenshots, tests). |
 
 ## Project layout
 

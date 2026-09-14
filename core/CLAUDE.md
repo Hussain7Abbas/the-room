@@ -17,8 +17,10 @@
 | `SeasonStats` | `SeasonStats.cs` | Legacy JSON season stats, **only for servers not started by the lobby** |
 | `RoomReporter` | `RoomReporter.cs` | Lobby rooms only: heartbeat every 5 s and the match report on match end |
 
-Not autoloads: `Main.cs`/`Main.tscn` (the game scene), `KillfeedUI`, `DebugOverlay`, and
-`LobbyApi.cs` (the menu's static HTTP client).
+Not autoloads: `Main.cs`/`Main.tscn` (the game scene), `KillfeedUI`, `DebugOverlay`, `LobbyApi.cs`
+(the menu's static HTTP client), and `GameSettings.cs` (`user://settings.cfg`: always
+load → change → save, so no section wipes another; display mode is applied at menu start and
+skipped when headless or movie-writing).
 
 ## Rules
 

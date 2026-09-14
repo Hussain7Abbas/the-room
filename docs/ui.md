@@ -14,20 +14,27 @@ theme resources.
 | **Match history** | Paginated table (when, room, winner, length, players). The newest match on the page opens in the details panel: full scoreboard (rank, player, character, points, kills, deaths), MVP and awards. **Only my matches** filters by your name. |
 | **Leaderboard** | Season standings, paginated: matches, wins, win %, K/D, kills, best score. Top 3 in gold, your row highlighted. |
 | Practice alone | Offline, with no server. |
+| **Settings** | A dialog with two tabs. **Display:** "Display Mode" is Maximized (the default), Windowed or Fullscreen; it applies immediately, is saved, and is re-applied at every launch. **Controls:** every action and its current key, read live from the input map and shown with your keyboard layout's key names. Rebinding isn't available yet. |
+| **About** | What the game is, "© 2026 Voidra Team", and a link to [github.com/Voidra-iq](https://github.com/Voidra-iq). |
 | Status line | Whether the lobby is reachable, and how many rooms and players there are. |
 | Notices | Errors (red, 12 s) and confirmations (green, 5 s) float at the bottom centre. Disconnect reasons from the last session show here too. |
 
 ![Leaderboard](images/menu-leaderboard.png)
 
-Launching with `--server` or `--connect` skips the menu. `--menu-page=history|leaderboard` opens
-it on that page, which is handy for screenshots.
+![Settings: Controls](images/settings-controls.png)
+
+Launching with `--server` or `--connect` skips the menu. For screenshots:
+
+- `--menu-page=history|leaderboard` opens the menu on that page;
+- `--menu-open=settings|controls|about` opens that dialog on top.
 
 ## In game (`ui/GameMenu.cs`, part of `core/Main.tscn`, clients only)
 
 - **Connecting overlay:** "Connecting to <room>…" with Cancel. It gives up after 12 s with a
   clear message.
 - **Esc menu:** the room's name and **code** (with a Copy button, to invite friends), plus
-  **Resume** and **Leave room** (**Back to menu** in practice). The match keeps running; your
+  **Resume**, **Settings** (the same dialog as the main menu) and **Leave room** (**Back to menu**
+  in practice). Esc closes the Settings dialog first, then the menu. The match keeps running; your
   character just stops taking input (`GameMenu.IsOpen`).
 - **Tab:** scoreboard (`core/KillfeedUI.cs`), along with the killfeed, announcement banners and
   the results panel.
@@ -45,6 +52,11 @@ it on that page, which is handy for screenshots.
 - `UiTheme.Label/Button/Spacer` helpers, and formatting helpers (`TimeAgo`, `Duration`,
   `ModeLabel`, `CharacterLabel`).
 - `PaginationBar`: a reusable pager for any paged list.
+- `ModalDialog`: the base for popups (dimmed background, title, Close, Esc). `SettingsDialog` and
+  `AboutDialog` build on it.
+- Settings are stored by `core/GameSettings.cs` in `user://settings.cfg`, in sections `[player]` (name,
+  character) and `[display]` (mode). Always load, change and save the file, or one screen wipes
+  another's section.
 
 ## Adding a screen or panel
 

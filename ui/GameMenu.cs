@@ -16,6 +16,7 @@ public partial class GameMenu : CanvasLayer
     /// <summary>Player reads this to ignore movement, attacks and mouse look while the menu is up.</summary>
     public static bool IsOpen { get; private set; }
 
+    private Control _root = null!;
     private Control _connecting = null!;
     private Label _connectingTitle = null!;
     private Control _menu = null!;
@@ -36,6 +37,7 @@ public partial class GameMenu : CanvasLayer
         Layer = 20;
         var root = new Control { AnchorRight = 1, AnchorBottom = 1, MouseFilter = Control.MouseFilterEnum.Ignore, Theme = UiTheme.Get() };
         AddChild(root);
+        _root = root;
 
         _connecting = BuildConnecting();
         root.AddChild(_connecting);
@@ -108,6 +110,7 @@ public partial class GameMenu : CanvasLayer
         _codeRow = codeRow;
 
         box.AddChild(UiTheme.Button("Resume", "AccentButton", () => SetOpen(false)));
+        box.AddChild(UiTheme.Button("Settings", onPressed: () => _root.AddChild(new SettingsDialog())));
         _leave = UiTheme.Button("Leave room", onPressed: () => Net.Instance.Leave());
         box.AddChild(_leave);
         box.AddChild(UiTheme.Label("Esc to close  ·  Tab for the scoreboard", "Muted", fontSize: 12));

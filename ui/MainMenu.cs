@@ -19,7 +19,6 @@ namespace TheRoom.UI;
 /// </summary>
 public partial class MainMenu : Control
 {
-    private const string SettingsPath = "user://settings.cfg";
     private const double RoomRefreshSeconds = 5.0;
     private const double NewRoomStartTimeoutSeconds = 10.0;
 
@@ -66,6 +65,11 @@ public partial class MainMenu : Control
 
     public override void _Ready()
     {
+        // The saved window mode (Settings → Display), applied before anything else so scripted
+        // --connect clients get it too. Headless servers and bots skip it inside.
+        if (!Net.Instance.IsServer)
+            GameSettings.ApplySavedDisplayMode();
+
         // --server / --connect: no menu, straight into the game scene.
         if (Net.Instance.Mode != Net.SessionMode.None || Net.Instance.Pending is not null)
         {
@@ -79,6 +83,7 @@ public partial class MainMenu : Control
         LoadSettings();
         ShowPage(StartPage());
         _ = RefreshRooms(); // also sets the lobby status line, whichever page opened first
+        OpenStartDialog();
 
         if (Net.Instance.LastDisconnectReason is { } reason)
         {
@@ -244,6 +249,12 @@ public partial class MainMenu : Control
         practice.Alignment = HorizontalAlignment.Left;
         _actionButtons.Add(practice);
         nav.AddChild(practice);
+        var settings = UiTheme.Button("Settings", "NavButton", () => AddChild(new SettingsDialog()));
+        settings.Alignment = HorizontalAlignment.Left;
+        nav.AddChild(settings);
+        var about = UiTheme.Button("About", "NavButton", () => AddChild(new AboutDialog()));
+        about.Alignment = HorizontalAlignment.Left;
+        nav.AddChild(about);
         var quit = UiTheme.Button("Quit", "NavButton", () => GetTree().Quit());
         quit.Alignment = HorizontalAlignment.Left;
         nav.AddChild(quit);
@@ -472,6 +483,17 @@ public partial class MainMenu : Control
     }
 
     /// <summary>--menu-page=history|leaderboard opens the menu on that page (screenshots, testing).</summary>
+    /// <summary>--menu-open=settings|controls|about opens that dialog on top (screenshots, testing).</summary>
+    private void OpenStartDialog()
+    {
+        foreach (var arg in OS.GetCmdlineUserArgs())
+        {
+            if (arg == "--menu-open=settings") AddChild(new SettingsDialog());
+            if (arg == "--menu-open=controls") AddChild(new SettingsDialog(SettingsDialog.Tab.Controls));
+            if (arg == "--menu-open=about") AddChild(new AboutDialog());
+        }
+    }
+
     private static Page StartPage()
     {
         foreach (var arg in OS.GetCmdlineUserArgs())
@@ -848,8 +870,7 @@ public partial class MainMenu : Control
 
     private void LoadSettings()
     {
-        var config = new ConfigFile();
-        config.Load(SettingsPath); // a missing file just leaves the defaults below
+        var config = GameSettings.Load();
         _nameEdit.Text = config.GetValue("player", "name", Net.Instance.LocalPlayerName).AsString();
         var character = config.GetValue("player", "character", Net.Instance.ChosenCharacterId ?? "").AsString();
         var index = CharacterRegistry.All.Keys.ToList().IndexOf(character);
@@ -858,10 +879,12 @@ public partial class MainMenu : Control
 
     private void SaveSettings()
     {
-        var config = new ConfigFile();
+        // Load first: the same file holds the display mode (GameSettings), which a fresh
+        // ConfigFile would wipe.
+        var config = GameSettings.Load();
         config.SetValue("player", "name", _nameEdit.Text.Trim());
         config.SetValue("player", "character", SelectedCharacterId() ?? "");
-        config.Save(SettingsPath);
+        GameSettings.Save(config);
     }
 
     private void ShowToast(string text, Color color)
