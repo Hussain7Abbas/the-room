@@ -195,12 +195,12 @@ deploy-server:
 	@echo "$(GREEN)Deployed.$(RESET) make deploy-status / deploy-logs to check on it."
 
 deploy-nginx:
-	@scp "$(ROOT)/deploy/nginx/room-api.iscoded.com.conf" "$(DEPLOY_HOST):/tmp/room-api.iscoded.com.conf"
 	@ssh "$(DEPLOY_HOST)" '\
-		cp /etc/nginx/sites-available/room-api.iscoded.com.conf /tmp/room-api.iscoded.com.conf.bak && \
-		install -m 644 /tmp/room-api.iscoded.com.conf /etc/nginx/sites-available/room-api.iscoded.com.conf && \
+		live=/etc/nginx/sites-available/room-api.iscoded.com.conf; new=$$(mktemp); backup=$$(mktemp) && \
+		cat > "$$new" && cp "$$live" "$$backup" && install -m 644 "$$new" "$$live" && \
 		if nginx -t; then systemctl reload nginx && echo "nginx reloaded"; \
-		else echo "nginx -t failed; restoring previous config"; cp /tmp/room-api.iscoded.com.conf.bak /etc/nginx/sites-available/room-api.iscoded.com.conf; exit 1; fi'
+		else echo "nginx -t failed; restoring previous config"; cp "$$backup" "$$live"; exit 1; fi; \
+		rm -f "$$new" "$$backup"' < "$(ROOT)/deploy/nginx/room-api.iscoded.com.conf"
 
 deploy-status:
 	@ssh "$(DEPLOY_HOST)" "systemctl status $(DEPLOY_SERVICE) --no-pager -l"

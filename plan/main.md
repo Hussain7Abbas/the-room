@@ -21,6 +21,7 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
 | 4 | Match shape | M3 | Does a match have a shape and an ending? (Bounty, Golden Knife, Last Call) | [~] | [phase-4-match-shape.md](phase-4-match-shape.md) |
 | 5 | Roster, art pass, awards | M4 | Does the roster read at a glance in a crowd? | [~] | [phase-5-roster-awards.md](phase-5-roster-awards.md) — blocked on real character designers |
 | 6 | Meta & social layer | post-M4 | Do people rematch and talk about it afterwards? | [~] | [phase-6-meta-social.md](phase-6-meta-social.md) |
+| 7 | Menu, rooms & match history | post-M4 | Can people find each other and see their history without leaving the game? | [~] | [docs/lobby/Intro.md](../docs/lobby/Intro.md), [docs/ui.md](../docs/ui.md) |
 
 ## Cross-cutting rules (apply to every phase)
 - **Pillar priority 2 → 4 → 3 → 1.** Readability beats pace beats identity beats comedy.
@@ -65,3 +66,13 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
   - `animation/CharacterModel.cs` scales any model to the hit capsule, strips root motion and matches run speed to the feet. Attack animations play from a server cue, so a rejected press never shows a swing (Pillar 2). Attack slices were chosen from rendered frames so the strike lands on the windup.
   - Zain is the default body for every character, tinted by character colour. Headless server and bots skip the model entirely.
   - Verified in a rendered 4-player match: models tinted per character, remote players run and stab, and no errors on server or client. **Still grey-box:** the death "ragdoll" is still a capsule, and there is no idle, parry or dash clip yet. All 11 room colliders are now `StaticBody3D` with box and cylinder shapes, and in-geometry samples dropped to 0 of 1014.
+- 2026-09-14 — **Phase 7: menu, rooms and match history.**
+  - New `services/lobby` (ASP.NET + SQLite) runs the permanent main room and up to 4 player-created rooms (public or private, with a 5-letter code). It closes idle rooms and stores every finished match; history and leaderboard are paginated. Rooms report heartbeats and results with per-room tokens on loopback-only `/internal` routes.
+  - The game gained a main menu (room browser, join by code, create room, match history with details, leaderboard, practice), an in-game Esc menu with the room code, and a connect timeout. `Net` is now a session state machine (menu / practice / server / client), so players go menu → room → menu without restarting.
+  - Verified locally end to end, then live: the main room and a new room on UDP 60011 were both joined over the internet. Menu renders were checked and fixed (clipped tables, a notice pushed off-screen). Two bugs fixed: ping RPCs sent before the connection was up, and 0–0 matches giving everyone a "win".
+  - `the-room-lobby.service` replaces `the-room-server.service`. 9 xUnit tests added for the lobby.
+- 2026-09-14 — **Documentation.**
+  - `docs/` (entry `docs/intro.md`): getting started, architecture, gameplay, characters & animation, lobby, UI, testing, deployment, and a detailed from-scratch `server-config.md`.
+  - `CLAUDE.md` rules and code style at the root and in `core/`, `player/`, `abilities/`, `animation/`, `ui/` and `services/`, with self-update rules so docs change alongside code.
+  - Public `README.md` crediting the Voidra team.
+

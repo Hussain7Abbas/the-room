@@ -1,73 +1,93 @@
 # The Room
 
-A fast, funny knife-fight deathmatch in one room, where every character is a caricature of the
-developer who built them. See [`GDD.md`](GDD.md), [`DESIGN-PILLARS.md`](DESIGN-PILLARS.md), and
-[`CHARACTER-SPEC.md`](CHARACTER-SPEC.md) for design.
+**A fast, funny knife-fight deathmatch in one room**, where every character is a caricature of the
+developer who built them. Made by the **Voidra** team with Godot 4.7 (.NET / C#).
 
-Build plan and progress tracking: [`plan/main.md`](plan/main.md).
+![Gameplay](docs/images/gameplay.png)
 
-## Requirements
+## Features
 
-- **Godot 4.7.2 (.NET/mono build)** — this repo assumes `/Applications/Godot_mono.app` on macOS.
-  Update the `GODOT` variable at the top of the `Makefile` if yours lives elsewhere.
-- **.NET SDK 8+** (10.0.401 tested). On this machine it's installed at `/usr/local/share/dotnet`
-  but not on the default shell `PATH` — the `Makefile` adds it automatically for every target,
-  so you don't need to `export PATH` yourself.
+- **Third-person knife combat:** light, heavy lunge, parry, execute from behind, dash and jump.
+  Every hit is decided by the server with lag compensation, so every death is explainable.
+- **One ability per character,** built on a grammar the code enforces: every ability has a
+  visible tell and a cooldown, and can be countered.
+- **Match rules:** bounties on streaking players, a Golden Knife that makes every hit lethal,
+  Last Call, and end-of-match awards.
+- **Rooms:** a permanent public room, plus player-created public or private rooms joined with a
+  5-letter code.
+- **Match history & season leaderboard,** paginated, with the full scoreboard of every match.
+- **Pluggable characters:** any humanoid model plays the shared animations through Godot's
+  humanoid retargeting.
+
+![Main menu](docs/images/menu-play.png)
 
 ## Quick start
 
+Requirements: **Godot 4.7.2 .NET** and the **.NET SDK 8+**.
+
 ```bash
-make setup       # restore NuGet packages + sanity build
-make run-local   # 1 local headless server + 2 windowed clients in the same room
+git clone https://github.com/Hussain7Abbas/the-room.git && cd the-room
+make setup            # restore packages + build
+make run-local N=2    # a local server + 2 windowed clients
 ```
 
-Run `make help` for the full target list (server/client separately, custom port/player count, etc.).
+To play online, open the project in Godot and press **Play**. The main menu connects to the
+public lobby, where you can join the main room, create your own, or practice alone.
 
-## Networking
+| Move | Look | Light | Heavy | Parry | Dash | Jump | Ability | Scoreboard | Menu |
+|---|---|---|---|---|---|---|---|---|---|
+| WASD | Mouse | LMB | RMB | Q | Shift | Space | E | Tab | Esc |
 
-- `--server` — run headless as a dedicated server (also auto-detected when the display server
-  is `headless`, e.g. an exported Linux server build — unless `--connect` is also given).
-- `--connect=<host>` — join a server as a client. Defaults to `127.0.0.1`.
-- `--port=<port>` — override the default port (`60010`).
-- `--name=<name>` — display name sent to the server.
-- `--bot` — run as a headless client driven by simple wander/stab AI instead of real input.
-  `make run-bots N=6 HOST=<host>` connects a swarm to a running server.
-- `--sim-latency=<ms>` / `--sim-loss=<0..1>` — artificially delay/drop this client's own outgoing
-  RPCs, for testing prediction/reconciliation locally without a real bad connection.
-- No flags at all → runs fully **offline** (single local player, no networking) for quick solo
-  iteration in the editor.
+`make help` lists everything else: bots, a local lobby, animation preview, tests and deploy.
 
-Movement is server-authoritative with client-side prediction + reconciliation; the temporary
-"stab" verb (real melee lands in Phase 2) uses server-side rewind lag compensation. See
-[`plan/phase-1-network-spike.md`](plan/phase-1-network-spike.md) for the architecture, the two
-real bugs found while building it, and real-WAN test numbers.
+## Documentation
 
-### Deployed server
+Everything is in **[`docs/`](docs/intro.md)**:
 
-A dedicated server is live at **`room-udp.iscoded.com:60010`** — connect with
-`make run-client HOST=room-udp.iscoded.com` or `godot --path . -- --connect=room-udp.iscoded.com`.
-It's DNS-only (Cloudflare grey-cloud): don't proxy this hostname, raw UDP can't cross Cloudflare's
-HTTP-only proxy. Redeploy with `make deploy-server`; check on it with `make deploy-status` /
-`make deploy-logs`. It runs isolated (own system user, own systemd unit) on a box shared with
-other apps — see `plan/phase-1-network-spike.md` for details.
+- [Getting started](docs/getting-started.md): setup, controls, command-line flags.
+- [Architecture](docs/architecture/Intro.md): networking, sessions, match loop.
+- [Gameplay](docs/gameplay/Intro.md): combat, abilities, tuning.
+- [Characters & animation](docs/characters/Intro.md): adding models and clips.
+- [Lobby service](docs/lobby/Intro.md): rooms, HTTP API, match history.
+- [Testing](docs/testing.md), [Deployment](docs/deployment.md), and
+  [Server configuration](docs/server-config.md) (installing on a new server).
 
-`room-api.iscoded.com` is a separate, unrelated placeholder (Cloudflare-proxied, HTTPS) for the
-future HTTP API from Phase 6 — see `deploy/nginx/room-api.iscoded.com.conf`.
+The build plan and change log are in [`plan/main.md`](plan/main.md).
 
-## Project layout
+## Tech
 
-```
-core/          # networking, combat/rewind, ping, tuning loader, signal bus, debug overlay, Main scene
-player/        # player scene + controller (movement, camera, prediction, stab verb, bot AI)
-maps/room/     # the arena (grey-box)
-tuning/        # tuning.tres — the single source of truth for every gameplay number
-deploy/nginx/  # nginx configs for HTTP-facing subdomains (not the game server itself — that's raw UDP)
-plan/          # phased build plan + status tracking
-```
+| Part | Stack |
+|---|---|
+| Game client & room servers | Godot 4.7.2 (.NET), C#, ENet (UDP), Jolt physics |
+| Lobby | ASP.NET Core minimal API (.NET 8), SQLite |
+| Hosting | Linux + systemd + nginx; the API sits behind Cloudflare, and gameplay UDP goes direct |
+| Tests | GoDotTest (game), xUnit (lobby) |
 
-## The tuning file
+## Status
 
-Every gameplay number (damage, wind-ups, cooldowns, durations, radii) lives in
-[`tuning/tuning.tres`](tuning/tuning.tres), backed by [`tuning/Tuning.cs`](tuning/Tuning.cs).
-Character/ability owners control an ability's *shape* (code); this file controls its *strength*
-(numbers) — see `CHARACTER-SPEC.md` Part 4. Don't hardcode gameplay numbers elsewhere.
+Playable, but pre-alpha and grey-box:
+
+- the arena is block geometry;
+- there's one character model (Zain) with run, jump and stab animations;
+- the two abilities are framework examples until real designers claim their characters.
+
+See [`plan/main.md`](plan/main.md) for phase-by-phase status.
+
+## Contributing
+
+- Design rules and code style live in [`CLAUDE.md`](CLAUDE.md) and the `CLAUDE.md` in each major
+  folder.
+- Gameplay numbers only go in `tuning/tuning.tres`.
+- Run `make test` before you push, and update `docs/` in the same change as the code.
+
+## Credits
+
+Made by the **Voidra** team.
+
+- Character model and animations from [Mixamo](https://www.mixamo.com).
+- Built with [Godot Engine](https://godotengine.org).
+
+## License
+
+No license has been chosen yet, so all rights are reserved by the Voidra team. Please ask before
+reusing the code or assets.

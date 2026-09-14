@@ -1,0 +1,47 @@
+# Abilities
+
+Every character has **one** ability. The grammar comes from the Character Spec and is **enforced
+in code**, not just in reviews.
+
+## The grammar
+
+Every ability follows: **input → tell (≥ 0.3 s, visible) → effect → end → cooldown (12–25 s)**.
+
+- `abilities/Ability.cs` refuses to activate an ability whose tell is too short or whose cooldown
+  is out of range.
+- Control effects (slow and similar) last 1 s at most (`MaxControlEffectDuration`).
+- One archetype slot per ability (Mobility, Zone Denial, …) and a power budget: one strong axis
+  and at most one weak axis (damage, movement, control, information).
+- Counterplay must be describable in one sentence. The validator checks the text exists.
+- `abilities/AbilityValidator.cs` runs on every boot and in `make test`.
+
+## Current abilities
+
+> Both are **placeholder examples** written to prove the framework. Per Pillar 3 a real character
+> must be designed by the developer it caricatures. Replace these; don't build on them.
+
+| Character | Ability | Slot | Effect | Cooldown |
+|---|---|---|---|---|
+| `blink` | Blink | Mobility | After a 0.3 s blue flash, sweeps up to 6 m forward, stopping at walls and players | 14 s |
+| `firepatch` | Fire Patch | Zone Denial | After a 0.3 s tell, throws an 8 m arc and leaves a 2.5 m zone dealing 20 damage/s for 4 s | 18 s |
+
+## Adding an ability
+
+1. The owning developer fills in `characters/<id>/SPEC.md` from `characters/_template/SPEC.md`.
+2. Write `abilities/<Name>Ability.cs` deriving from `Ability`. Implement the effect; the tell and
+   cooldown come from the base class.
+3. Put **every number** in `tuning/tuning.tres` under `AbilityNumbers`, as `"<id>.<param>"`. At a
+   minimum:
+   - `tell_seconds`;
+   - `cooldown`;
+   - the ability's own numbers.
+   Read them with `TuningService.Instance.GetAbilityNumber(Def.Id, "<param>", fallback)`.
+4. Use the shared kit, never custom systems:
+   - `Caster.ServerSweep` for movement;
+   - `ApplySlow` (≤ 1 s);
+   - `Reveal`;
+   - `SpawnDamageZone`.
+5. Add an `AbilityDef` + `CharacterDef` in `abilities/CharacterRegistry.cs`, and a case in
+   `Player.CreateAbility`.
+6. `make test` runs the validator. Then run bots with `--character=<id>` and check the server log.
+7. Update this page.

@@ -1,0 +1,57 @@
+# Menus (UI)
+
+All UI is built in C# (`ui/`) with one shared theme (`ui/UiTheme.cs`). There are no hand-authored
+theme resources.
+
+![Main menu](images/menu-play.png)
+
+## Main menu (`ui/MainMenu.cs`, the project's main scene)
+
+| Area | What it does |
+|---|---|
+| Header | Your **name** and **character**, saved to `user://settings.cfg`. On Windows that's `%APPDATA%\Godot\app_userdata\The Room\`; on macOS, `~/Library/Application Support/Godot/app_userdata/The Room/`. |
+| **Play** | Room list (refreshes every 5 s; double-click or **Join room**), **Join with a code** for private rooms, and **Create a room** (name, Duel Pit or Chaos, private). Creating waits for the room's server to start, copies a private room's code to the clipboard, then joins. |
+| **Match history** | Paginated table (when, room, winner, length, players). The newest match on the page opens in the details panel: full scoreboard (rank, player, character, points, kills, deaths), MVP and awards. **Only my matches** filters by your name. |
+| **Leaderboard** | Season standings, paginated: matches, wins, win %, K/D, kills, best score. Top 3 in gold, your row highlighted. |
+| Practice alone | Offline, with no server. |
+| Status line | Whether the lobby is reachable, and how many rooms and players there are. |
+| Notices | Errors (red, 12 s) and confirmations (green, 5 s) float at the bottom centre. Disconnect reasons from the last session show here too. |
+
+![Leaderboard](images/menu-leaderboard.png)
+
+Launching with `--server` or `--connect` skips the menu. `--menu-page=history|leaderboard` opens
+it on that page, which is handy for screenshots.
+
+## In game (`ui/GameMenu.cs`, part of `core/Main.tscn`, clients only)
+
+- **Connecting overlay:** "Connecting to <room>…" with Cancel. It gives up after 12 s with a
+  clear message.
+- **Esc menu:** the room's name and **code** (with a Copy button, to invite friends), plus
+  **Resume** and **Leave room** (**Back to menu** in practice). The match keeps running; your
+  character just stops taking input (`GameMenu.IsOpen`).
+- **Tab:** scoreboard (`core/KillfeedUI.cs`), along with the killfeed, announcement banners and
+  the results panel.
+
+## Theme and building blocks
+
+- **Colours:**
+  - near-black panels;
+  - **red** `#c8463d` for primary actions and highlights;
+  - **gold** `#f2c14e` for winners;
+  - green and red for status.
+- **Type variations,** set per control with `ThemeTypeVariation`: `AccentButton` (primary),
+  `NavButton` (left nav), `GhostButton` (low emphasis), `Card` (raised panel), `Muted`, `Heading`,
+  `Title`.
+- `UiTheme.Label/Button/Spacer` helpers, and formatting helpers (`TimeAgo`, `Duration`,
+  `ModeLabel`, `CharacterLabel`).
+- `PaginationBar`: a reusable pager for any paged list.
+
+## Adding a screen or panel
+
+1. Build it in C#, using `UiTheme` variations rather than colour overrides.
+2. Fetch data through `core/LobbyApi` with `async`/`await`, check `IsInsideTree()` after every
+   `await`, and disable buttons while a request is running.
+3. Show errors with a notice that says what to do next.
+4. **Render it and look** at the default 1152×648 size: no clipped text, no horizontal scrollbar.
+   See [Testing](testing.md#looking-at-the-game).
+5. Update this page.
