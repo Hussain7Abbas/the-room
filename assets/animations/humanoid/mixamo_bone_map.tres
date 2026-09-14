@@ -1,0 +1,34 @@
+[gd_resource type="BoneMap" load_steps=2 format=3]
+
+[sub_resource type="SkeletonProfileHumanoid" id="SkeletonProfileHumanoid_1"]
+
+[resource]
+profile = SubResource("SkeletonProfileHumanoid_1")
+bone_map/Hips = &"mixamorig_Hips"
+bone_map/Spine = &"mixamorig_Spine"
+bone_map/Chest = &"mixamorig_Spine1"
+bone_map/UpperChest = &"mixamorig_Spine2"
+bone_map/Neck = &"mixamorig_Neck"
+bone_map/Head = &"mixamorig_Head"
+bone_map/LeftShoulder = &"mixamorig_LeftShoulder"
+bone_map/LeftUpperArm = &"mixamorig_LeftArm"
+bone_map/LeftLowerArm = &"mixamorig_LeftForeArm"
+bone_map/LeftHand = &"mixamorig_LeftHand"
+bone_map/LeftIndexProximal = &"mixamorig_LeftHandIndex1"
+bone_map/LeftIndexIntermediate = &"mixamorig_LeftHandIndex2"
+bone_map/LeftIndexDistal = &"mixamorig_LeftHandIndex3"
+bone_map/LeftUpperLeg = &"mixamorig_LeftUpLeg"
+bone_map/LeftLowerLeg = &"mixamorig_LeftLeg"
+bone_map/LeftFoot = &"mixamorig_LeftFoot"
+bone_map/LeftToes = &"mixamorig_LeftToeBase"
+bone_map/RightShoulder = &"mixamorig_RightShoulder"
+bone_map/RightUpperArm = &"mixamorig_RightArm"
+bone_map/RightLowerArm = &"mixamorig_RightForeArm"
+bone_map/RightHand = &"mixamorig_RightHand"
+bone_map/RightIndexProximal = &"mixamorig_RightHandIndex1"
+bone_map/RightIndexIntermediate = &"mixamorig_RightHandIndex2"
+bone_map/RightIndexDistal = &"mixamorig_RightHandIndex3"
+bone_map/RightUpperLeg = &"mixamorig_RightUpLeg"
+bone_map/RightLowerLeg = &"mixamorig_RightLeg"
+bone_map/RightFoot = &"mixamorig_RightFoot"
+bone_map/RightToes = &"mixamorig_RightToeBase"

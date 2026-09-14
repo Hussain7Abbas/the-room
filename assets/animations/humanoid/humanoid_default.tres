@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="HumanoidAnimationSet" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://animation/HumanoidAnimationSet.cs" id="1"]
+[ext_resource type="AnimationLibrary" path="res://assets/animations/humanoid/run.fbx" id="2"]
+[ext_resource type="AnimationLibrary" path="res://assets/animations/humanoid/jump.fbx" id="3"]
+[ext_resource type="AnimationLibrary" path="res://assets/animations/humanoid/stab.fbx" id="4"]
+
+[resource]
+script = ExtResource("1")
+Run = ExtResource("2")
+Jump = ExtResource("3")
+LightAttack = ExtResource("4")
+HeavyAttack = ExtResource("4")
+LightAttackClipStart = 0.7
+LightAttackClipEnd = 1.3
+LightAttackDuration = 0.35
+HeavyAttackClipStart = 0.2
+HeavyAttackClipEnd = 2.1
+HeavyAttackDuration = 1.0

@@ -18,6 +18,15 @@ public partial class CharacterDef : Resource
     [Export] public string OneLinePersonality = "";
     [Export] public Color SilhouetteColor = Colors.White;
 
+    [ExportGroup("Model & animation (any humanoid rig, see assets/animations/humanoid/README.md)")]
+    /// <summary>Null means CharacterModel.DefaultModelPath (Zain).</summary>
+    [Export] public PackedScene? Model;
+    /// <summary>Null means the shared HumanoidAnimationSet.DefaultPath.</summary>
+    [Export] public TheRoom.Animation.HumanoidAnimationSet? Animations;
+    /// <summary>Tint the model with SilhouetteColor. Right for untextured models like Zain; turn
+    /// it off for a textured model, or the colour multiplies over the texture.</summary>
+    [Export] public bool TintModel = true;
+
     [ExportGroup("Ability")]
     [Export] public AbilityDef? Ability;
 

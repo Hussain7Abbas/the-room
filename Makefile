@@ -27,6 +27,8 @@ HOST      ?= 127.0.0.1
 N         ?= 2
 CHARACTER ?=
 CHAR_FLAG := $(if $(CHARACTER),--character=$(CHARACTER),)
+MODEL ?=
+MODEL_FLAG := $(if $(MODEL),--model=$(MODEL),)
 
 # VPS deploy target (see plan/phase-1-network-spike.md). SSH host is an alias from ~/.ssh/config;
 # app runs isolated under its own system user/service, never as part of DEPLOY_HOST's other apps.
@@ -37,7 +39,7 @@ DEPLOY_SERVICE ?= the-room-server.service
 
 .PHONY: help \
 	install setup \
-	build run-server run-client run-local run-bots \
+	build run-server run-client run-local run-bots preview-animations \
 	clean \
 	test \
 	deploy-server deploy-logs deploy-status \
@@ -60,6 +62,7 @@ help:
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "run-client" "Run one windowed client and connect ($(YELLOW)godot --connect$(RESET)). HOST=$(HOST) PORT=$(PORT) CHARACTER=$(CHARACTER)"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "run-local" "Spawn 1 local server + N windowed clients. N=$(N) PORT=$(PORT) CHARACTER=$(CHARACTER)"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "run-bots" "Connect N headless wander/stab/ability bots to a server (see run-server). N=$(N) HOST=$(HOST) PORT=$(PORT) CHARACTER=$(CHARACTER)"
+	@printf "  $(GREEN)%-14s$(RESET) %s\n" "preview-animations" "Side-view preview of a model playing every shared clip ($(YELLOW)tools/AnimationPreview.tscn$(RESET)). MODEL=res://...fbx (default Zain)"
 	@echo ""
 	@echo "$(BLUE)Quality$(RESET)"
 	@printf "  $(GREEN)%-14s$(RESET) %s\n" "clean" "Remove build/editor caches ($(YELLOW).godot/mono, bin, obj$(RESET))"
@@ -123,6 +126,9 @@ run-bots: build
 		sleep 0.3; \
 	done; \
 	wait
+
+preview-animations: build
+	@cd "$(ROOT)" && "$(GODOT)" --path . res://tools/AnimationPreview.tscn -- $(MODEL_FLAG)
 
 ## ------------------------------------------------------------------------
 ## Quality

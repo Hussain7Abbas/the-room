@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Godot;
 using TheRoom.Abilities;
+using TheRoom.Animation;
 using TheRoom.Config;
 using TheRoom.Core;
 
@@ -40,7 +41,13 @@ public partial class Player : CharacterBody3D
 
     private SpringArm3D _springArm = null!;
     private MeshInstance3D? _meshInstance;
-    private StandardMaterial3D? _meshMaterial;
+    // Everything tinted with the character colour and flashed for tells: the grey-box capsule's
+    // material, or every surface of the character model once one is attached.
+    private readonly List<StandardMaterial3D> _bodyMaterials = new();
+    private CharacterModel? _model;
+    private Vector3 _lastVisualPosition;
+    private Vector3 _visualVelocity;
+    private float _visualAirborneHold;
     private float _pitchRadians;
 
     // --- role, decided once in _Ready ---
@@ -140,8 +147,9 @@ public partial class Player : CharacterBody3D
         _meshInstance = GetNodeOrNull<MeshInstance3D>(MeshPath);
         if (_meshInstance?.GetActiveMaterial(0) is StandardMaterial3D baseMat)
         {
-            _meshMaterial = (StandardMaterial3D)baseMat.Duplicate();
-            _meshInstance.SetSurfaceOverrideMaterial(0, _meshMaterial);
+            var capsuleMaterial = (StandardMaterial3D)baseMat.Duplicate();
+            _meshInstance.SetSurfaceOverrideMaterial(0, capsuleMaterial);
+            _bodyMaterials.Add(capsuleMaterial);
         }
 
         _health = TuningService.Instance.MaxHealth;
@@ -260,6 +268,7 @@ public partial class Player : CharacterBody3D
             RunDeathCam(delta);
 
         UpdateVisualEffects(delta);
+        UpdateModelAnimation((float)delta);
     }
 
     public override void _PhysicsProcess(double delta)
@@ -531,12 +540,14 @@ public partial class Player : CharacterBody3D
                 if (_combatState != CombatState.Idle) return;
                 _combatState = CombatState.LightWindup;
                 _stateTimer = TuningService.Instance.LightWindup;
+                CueAttackAnimation(heavy: false);
                 break;
 
             case Verb.Heavy:
                 if (_combatState != CombatState.Idle) return;
                 _combatState = CombatState.HeavyWindup;
                 _stateTimer = TuningService.Instance.HeavyWindup;
+                CueAttackAnimation(heavy: true);
                 break;
 
             case Verb.Parry:
@@ -885,8 +896,97 @@ public partial class Player : CharacterBody3D
         _characterDef = CharacterRegistry.GetOrDefault(characterId);
         _ability = CreateAbility(_characterDef.Ability, this);
 
-        if (_meshMaterial is not null)
-            _meshMaterial.AlbedoColor = _characterDef.SilhouetteColor;
+        AttachModel(_characterDef);
+        if (_model is null || _characterDef.TintModel)
+        {
+            foreach (var material in _bodyMaterials)
+                material.AlbedoColor = _characterDef.SilhouetteColor;
+        }
+    }
+
+    /// <summary>Swaps the grey-box capsule for the character's animated model. Skipped when
+    /// headless (the dedicated server and --bot clients draw nothing), and if the model or
+    /// animation set fails to load the capsule stays, so a bad asset never costs a player their body.</summary>
+    private void AttachModel(CharacterDef def)
+    {
+        if (DisplayServer.GetName() == "headless")
+            return;
+
+        var modelScene = def.Model ?? GD.Load<PackedScene>(CharacterModel.DefaultModelPath);
+        var animations = def.Animations ?? GD.Load<HumanoidAnimationSet>(HumanoidAnimationSet.DefaultPath);
+        if (modelScene is null || animations is null)
+            return;
+
+        _model?.QueueFree();
+        var capsuleHeight = GetNodeOrNull<CollisionShape3D>("CollisionShape3D")?.Shape is CapsuleShape3D capsule ? capsule.Height : 1.8f;
+        _model = CharacterModel.Create(modelScene, animations, capsuleHeight);
+        _model.Position = new Vector3(0f, -capsuleHeight / 2f, 0f); // the capsule is centred on the body origin
+        AddChild(_model);
+        _modelAnimations = animations;
+
+        if (_meshInstance is not null)
+            _meshInstance.Visible = false;
+        _bodyMaterials.Clear();
+        _bodyMaterials.AddRange(_model.Materials);
+        _lastVisualPosition = GlobalPosition;
+    }
+    private HumanoidAnimationSet? _modelAnimations;
+
+    private void UpdateModelAnimation(float delta)
+    {
+        if (_model is null)
+            return;
+
+        Vector3 velocity;
+        bool onFloor;
+        if (_isRemoteView)
+        {
+            // Remote players are interpolated, not simulated: no Velocity or IsOnFloor to read,
+            // so both are recovered from how the interpolated position actually moved.
+            if (delta > 0f)
+            {
+                var raw = (GlobalPosition - _lastVisualPosition) / delta;
+                _visualVelocity = _visualVelocity.Lerp(raw, 1f - Mathf.Exp(-delta * 12f));
+            }
+            // Hold "airborne" briefly so the apex of a jump (vertical speed ~0) doesn't read as landing.
+            _visualAirborneHold = Mathf.Abs(_visualVelocity.Y) > 0.6f ? 0.15f : Mathf.Max(0f, _visualAirborneHold - delta);
+            velocity = _visualVelocity;
+            onFloor = _visualAirborneHold <= 0f;
+        }
+        else
+        {
+            velocity = Velocity;
+            onFloor = IsOnFloor();
+        }
+        _lastVisualPosition = GlobalPosition;
+
+        _model.UpdateLocomotion(delta, velocity, onFloor);
+    }
+
+    /// <summary>Called when the server starts a light or heavy windup. The attack animation
+    /// comes from the server rather than the key press, so a press the server rejects never
+    /// shows a swing that didn't happen (Pillar 2).</summary>
+    private void CueAttackAnimation(bool heavy)
+    {
+        if (_isOffline)
+            PlayAttackAnimation(heavy);
+        else if (_isServer)
+            Rpc(nameof(BroadcastAttackCue), heavy);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
+    private void BroadcastAttackCue(bool heavy)
+    {
+        if (!_isServer && Multiplayer.GetRemoteSenderId() != 1)
+            return;
+        PlayAttackAnimation(heavy);
+    }
+
+    private void PlayAttackAnimation(bool heavy)
+    {
+        if (_model is null || _modelAnimations is null)
+            return;
+        _model.PlayAttack(heavy, heavy ? _modelAnimations.HeavyAttackDuration : _modelAnimations.LightAttackDuration);
     }
 
     private static Ability? CreateAbility(AbilityDef? def, Player caster) => def?.Id switch
@@ -1080,17 +1180,17 @@ public partial class Player : CharacterBody3D
         if (_abilityTellRemaining > 0f)
             _abilityTellRemaining = Mathf.Max(0f, _abilityTellRemaining - (float)delta);
 
-        if (_meshMaterial is null)
-            return;
-
         Color? color = _abilityTellRemaining > 0f ? new Color(0.2f, 0.9f, 1f) // cyan
             : _revealRemaining > 0f ? new Color(1f, 0.15f, 0.15f) // red
             : _spawnProtectionRemaining > 0f ? new Color(1f, 1f, 1f) // white
             : null;
 
-        _meshMaterial.EmissionEnabled = color is not null;
-        if (color is { } c)
-            _meshMaterial.Emission = c;
+        foreach (var material in _bodyMaterials)
+        {
+            material.EmissionEnabled = color is not null;
+            if (color is { } c)
+                material.Emission = c;
+        }
     }
 
     // ------------------------------------------------------------------
