@@ -23,6 +23,7 @@ Net="*res://core/Net.cs"
 PingService="*res://core/PingService.cs"
 CombatServer="*res://core/CombatServer.cs"
 MatchServer="*res://core/MatchServer.cs"
+SeasonStats="*res://core/SeasonStats.cs"
 
 [display]
 

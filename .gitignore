@@ -9,3 +9,6 @@ obj/
 
 # Exports
 /build/
+
+# Runtime data (core/SeasonStats.cs writes this on the running server, per-deployment, never committed)
+/season_stats.json

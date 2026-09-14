@@ -39,3 +39,17 @@ offset_bottom = 80.0
 theme_override_font_sizes/font_size = 28
 horizontal_alignment = 1
 text = ""
+
+[node name="ResultsPanel" type="PanelContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -220.0
+offset_right = 220.0
+offset_bottom = 220.0
+
+[node name="ResultsList" type="VBoxContainer" parent="ResultsPanel"]
+alignment = 1

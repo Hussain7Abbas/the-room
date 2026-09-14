@@ -44,7 +44,14 @@ public partial class MatchServer : Node
     public int GetScore(long peerId) => _score.GetValueOrDefault(peerId);
     public int GetBounty(long peerId) => _bounty.GetValueOrDefault(peerId);
     public float MatchTimeRemaining => Mathf.Max(0f, TuningService.Instance.MatchTimeLimitSeconds - (float)_matchElapsed);
+    public float ResultsTimeRemaining => Mathf.Max(0f, (float)_resultsTimeRemaining);
     public int ScoreTarget => _scoreTarget;
+
+    // Persistent (for the whole results screen, not just a 4s banner flash) — see
+    // core/KillfeedUI.cs's ResultsPanel, populated once here per match, read every frame there.
+    public string LastMvpText { get; private set; } = "";
+    public IReadOnlyList<string> LastAwards { get; private set; } = System.Array.Empty<string>();
+    public IReadOnlyList<(string name, int score)> LastStandings { get; private set; } = System.Array.Empty<(string, int)>();
 
     // --- Golden Knife (GDD §5.4) ---
     private enum KnifeState { Respawning, Available, Held }
@@ -129,11 +136,27 @@ public partial class MatchServer : Node
         }
 
         var mvpName = mvpId >= 0 ? Main.GetPlayerName(mvpId) : "Nobody";
-        GD.Print($"[Match] Ended. MVP: {mvpName} ({Mathf.Max(0, mvpScore)} pts).");
-        Rpc(nameof(BroadcastAnnouncement), $"MATCH OVER — MVP: {mvpName} ({Mathf.Max(0, mvpScore)} pts)");
+        var mvpText = $"MVP: {mvpName} ({Mathf.Max(0, mvpScore)} pts)";
+        GD.Print($"[Match] Ended. {mvpText}.");
+        Rpc(nameof(BroadcastAnnouncement), $"MATCH OVER — {mvpText}");
 
-        foreach (var award in ComputeAwards())
+        var awards = ComputeAwards();
+        foreach (var award in awards)
             Rpc(nameof(BroadcastAnnouncement), award);
+
+        var standings = new List<(string, int)>();
+        foreach (var (id, s) in _score)
+            standings.Add((Main.GetPlayerName(id), s));
+        standings.Sort((a, b) => b.Item2.CompareTo(a.Item2));
+
+        var standingsJoined = string.Join(";", standings.ConvertAll(s => $"{s.Item1}:{s.Item2}"));
+        var awardsJoined = string.Join("|", awards);
+        Rpc(nameof(BroadcastMatchResults), mvpText, awardsJoined, standingsJoined);
+
+        // GDD §4 meta loop: persistent season stats + (optional, unconfigured by default)
+        // results webhook. See core/SeasonStats.cs.
+        SeasonStats.Instance.RecordMatch(standings, awards);
+        SeasonStats.Instance.PostResultsWebhook(mvpText, standings, awards);
     }
 
     /// <summary>GDD §7 "award titles" — computed from this match's telemetry, one line per
@@ -360,5 +383,30 @@ public partial class MatchServer : Node
             return;
 
         _score[peerId] = newScore;
+    }
+
+    /// <summary>Populates LastMvpText/LastAwards/LastStandings for the whole results screen
+    /// (core/KillfeedUI.cs's ResultsPanel) — unlike BroadcastAnnouncement's transient banner
+    /// lines, these persist until the next match's results.</summary>
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void BroadcastMatchResults(string mvpText, string awardsJoined, string standingsJoined)
+    {
+        if (!_isAuthoritative && Multiplayer.GetRemoteSenderId() != 1)
+            return;
+
+        LastMvpText = mvpText;
+        LastAwards = string.IsNullOrEmpty(awardsJoined) ? System.Array.Empty<string>() : awardsJoined.Split('|');
+
+        var standings = new List<(string, int)>();
+        if (!string.IsNullOrEmpty(standingsJoined))
+        {
+            foreach (var entry in standingsJoined.Split(';'))
+            {
+                var parts = entry.Split(':');
+                if (parts.Length == 2 && int.TryParse(parts[1], out var score))
+                    standings.Add((parts[0], score));
+            }
+        }
+        LastStandings = standings;
     }
 }

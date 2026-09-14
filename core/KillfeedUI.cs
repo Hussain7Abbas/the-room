@@ -22,6 +22,8 @@ public partial class KillfeedUI : CanvasLayer
     private Control _scoreboardPanel = null!;
     private VBoxContainer _scoreboardList = null!;
     private Label _announcementLabel = null!;
+    private Control _resultsPanel = null!;
+    private VBoxContainer _resultsList = null!;
 
     private readonly List<(Label label, double expiresAt)> _killfeedLines = new();
     private readonly Dictionary<long, int> _kills = new();
@@ -34,8 +36,11 @@ public partial class KillfeedUI : CanvasLayer
         _scoreboardPanel = GetNode<Control>("ScoreboardPanel");
         _scoreboardList = GetNode<VBoxContainer>("ScoreboardPanel/ScoreboardList");
         _announcementLabel = GetNode<Label>("AnnouncementLabel");
+        _resultsPanel = GetNode<Control>("ResultsPanel");
+        _resultsList = GetNode<VBoxContainer>("ResultsPanel/ResultsList");
         _scoreboardPanel.Visible = false;
         _announcementLabel.Visible = false;
+        _resultsPanel.Visible = false;
 
         Events.Instance.PlayerKilled += OnPlayerKilled;
         Events.Instance.MatchAnnouncement += OnMatchAnnouncement;
@@ -43,9 +48,15 @@ public partial class KillfeedUI : CanvasLayer
 
     public override void _Process(double delta)
     {
-        _scoreboardPanel.Visible = Input.IsActionPressed("scoreboard");
+        _scoreboardPanel.Visible = Input.IsActionPressed("scoreboard") && !MatchServer.Instance.IsResults;
         if (_scoreboardPanel.Visible)
             RebuildScoreboard();
+
+        // Short results screen (GDD §4/§7: "over-invested in relative to its build cost", "nobody
+        // should leave during it") — shown automatically for the whole results window, no key held.
+        _resultsPanel.Visible = MatchServer.Instance.IsResults;
+        if (_resultsPanel.Visible)
+            RebuildResultsScreen();
 
         var now = Time.GetTicksMsec() / 1000.0;
         for (var i = _killfeedLines.Count - 1; i >= 0; i--)
@@ -88,6 +99,30 @@ public partial class KillfeedUI : CanvasLayer
         _announcementLabel.Text = text;
         _announcementLabel.Visible = true;
         _announcementExpiresAt = Time.GetTicksMsec() / 1000.0 + AnnouncementLifetime;
+    }
+
+    private void RebuildResultsScreen()
+    {
+        foreach (var child in _resultsList.GetChildren())
+            child.QueueFree();
+
+        var match = MatchServer.Instance;
+        _resultsList.AddChild(new Label { Text = "MATCH OVER" });
+        _resultsList.AddChild(new Label { Text = match.LastMvpText });
+        _resultsList.AddChild(new Label { Text = "" });
+
+        foreach (var (name, score) in match.LastStandings)
+            _resultsList.AddChild(new Label { Text = $"{name,-16} {score} pts" });
+
+        if (match.LastAwards.Count > 0)
+        {
+            _resultsList.AddChild(new Label { Text = "" });
+            foreach (var award in match.LastAwards)
+                _resultsList.AddChild(new Label { Text = award });
+        }
+
+        _resultsList.AddChild(new Label { Text = "" });
+        _resultsList.AddChild(new Label { Text = $"Next match in {match.ResultsTimeRemaining:F0}s..." });
     }
 
     private void RebuildScoreboard()
