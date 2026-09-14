@@ -23,9 +23,12 @@ public partial class CharacterDef : Resource
     [Export] public PackedScene? Model;
     /// <summary>Null means the shared HumanoidAnimationSet.DefaultPath.</summary>
     [Export] public TheRoom.Animation.HumanoidAnimationSet? Animations;
-    /// <summary>Tint the model with SilhouetteColor. Right for untextured models like Zain; turn
-    /// it off for a textured model, or the colour multiplies over the texture.</summary>
+    /// <summary>Tint the model with SilhouetteColor. An untextured model takes the full colour; a
+    /// textured one (like Zain) only a light wash, so skin doesn't turn blue. Turn it off to
+    /// show the texture untouched.</summary>
     [Export] public bool TintModel = true;
+    /// <summary>What the right hand holds. Null means CharacterModel.DefaultHeldPropPath (the knife).</summary>
+    [Export] public PackedScene? HeldProp;
 
     [ExportGroup("Ability")]
     [Export] public AbilityDef? Ability;

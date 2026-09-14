@@ -31,10 +31,10 @@ shape code decisions:
 | `services/` | `lobby/` (ASP.NET rooms + match history API) and `Lobby.Tests/` | ✅ |
 | `maps/room/` | The arena (StaticBody3D primitive colliders, spawn markers at y=1) | |
 | `tuning/` | `tuning.tres` + `Tuning.cs`: **every gameplay number** | |
-| `assets/` | FBX models and animations (humanoid retarget, see `docs/characters/`) | |
+| `assets/` | FBX models + textures, animations, props (knife), audio (humanoid retarget, see `docs/characters/`) | |
 | `characters/` | Per-character spec sheets (`_template/`, placeholder examples) | |
 | `tests/` | GoDotTest suite (`make test`) | |
-| `tools/` | Dev tools (`AnimationPreview`) | |
+| `tools/` | Dev tools (`AnimationPreview`, `bake_knife.gd`) | |
 | `deploy/` | nginx + systemd files for the VPS | |
 | `plan/` | Phased build plan; `plan/main.md` is the progress + change log | |
 | `docs/` | Project documentation; start at `docs/intro.md` | |

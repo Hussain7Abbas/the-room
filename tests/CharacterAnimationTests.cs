@@ -60,6 +60,24 @@ public class CharacterAnimationTests : TestClass
     }
 
     [Test]
+    public void HeldPropAttachesToTheRightHand()
+    {
+        var model = CharacterModel.Create(GD.Load<PackedScene>(CharacterModel.DefaultModelPath), DefaultSet(), 1.8f,
+            GD.Load<PackedScene>(CharacterModel.DefaultHeldPropPath));
+        try
+        {
+            model.HeldProp.ShouldNotBeNull();
+            var attachment = model.HeldProp!.GetParent().ShouldBeOfType<BoneAttachment3D>();
+            attachment.BoneName.ShouldBe("RightHand");
+            attachment.GetParent().ShouldBeOfType<Skeleton3D>();
+        }
+        finally
+        {
+            model.Free();
+        }
+    }
+
+    [Test]
     public void BuiltModelHasEveryClipAndNoRootMotion()
     {
         var model = CharacterModel.Create(GD.Load<PackedScene>(CharacterModel.DefaultModelPath), DefaultSet(), 1.8f);

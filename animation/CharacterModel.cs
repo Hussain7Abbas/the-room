@@ -13,6 +13,10 @@ namespace TheRoom.Animation;
 public partial class CharacterModel : Node3D
 {
     public const string DefaultModelPath = "res://assets/characters/zain/zain.fbx";
+    public const string DefaultHeldPropPath = "res://assets/props/knife/knife.tscn";
+
+    // Standard humanoid name after retargeting, so a prop attaches the same way on every model.
+    private const string HandBone = "RightHand";
 
     public enum Clip { Idle, Run, Jump, LightAttack, HeavyAttack }
 
@@ -41,9 +45,13 @@ public partial class CharacterModel : Node3D
     public IReadOnlyList<StandardMaterial3D> Materials => _materials;
     public AnimationPlayer Animator => _animator;
 
+    /// <summary>The prop in the right hand (the knife), if any.</summary>
+    public Node3D? HeldProp { get; private set; }
+
     /// <summary>Builds the model without needing the scene tree, so tests can inspect it.
-    /// <paramref name="height"/> is the height the model is scaled to (the hit capsule's).</summary>
-    public static CharacterModel Create(PackedScene modelScene, HumanoidAnimationSet set, float height)
+    /// <paramref name="height"/> is the height the model is scaled to (the hit capsule's).
+    /// <paramref name="heldProp"/> is attached to the right hand; its own scene holds the grip offset.</summary>
+    public static CharacterModel Create(PackedScene modelScene, HumanoidAnimationSet set, float height, PackedScene? heldProp = null)
     {
         var model = new CharacterModel { Name = "Model" };
         var root = modelScene.Instantiate<Node3D>();
@@ -81,6 +89,17 @@ public partial class CharacterModel : Node3D
         model._animator = new AnimationPlayer { Name = "AnimationPlayer", PlaybackDefaultBlendTime = 0.15 };
         root.AddChild(model._animator);
         model._animator.AddAnimationLibrary("", model.BuildLibrary(set, skeleton, scale));
+
+        if (heldProp is not null && skeleton is not null && skeleton.FindBone(HandBone) >= 0)
+        {
+            var attachment = new BoneAttachment3D { Name = "RightHandAttachment", BoneName = HandBone };
+            skeleton.AddChild(attachment);
+            var prop = heldProp.Instantiate<Node3D>();
+            // The model root is scaled up to the capsule height; undo it so the prop keeps its real size.
+            prop.Scale = Vector3.One / scale;
+            attachment.AddChild(prop);
+            model.HeldProp = prop;
+        }
         return model;
     }
 

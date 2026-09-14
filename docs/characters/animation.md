@@ -69,6 +69,28 @@ For Rigify, VRoid or other rigs, create a new `BoneMap` in the Advanced Import d
 
 The clips don't change: they only know the standard names.
 
+## Held props (the knife)
+
+`CharacterModel` puts a **`BoneAttachment3D` on the `RightHand` bone**, a standard humanoid name,
+so it works on every retargeted model. It then instances the character's `HeldProp`
+(default `assets/props/knife/knife.tscn`) under it.
+
+- The model root is scaled up to the capsule height, so the prop's scale is set to the inverse.
+  It keeps its real size.
+- **The grip offset lives in `knife.tscn`**, on its `Mesh` child's transform. To re-seat the knife,
+  edit that transform in the editor and check with `make preview-animations CLOSEUP=1`. No code
+  changes.
+- The knife mesh (`knife_mesh.res`) is **baked** from the source `knife.obj` (a 106-surface OBJ in
+  centimetres) by `tools/bake_knife.gd`:
+  - it merges the surfaces into 4 parts: blade, edge, bronze fittings and leather grip;
+  - it gives them real materials;
+  - it scales the knife to 45 cm;
+  - it puts the origin at the grip, with +Y toward the tip.
+  Re-run it after replacing the OBJ: `godot --headless --path . --script res://tools/bake_knife.gd`.
+- Current seat: 9 cm into the palm, blade tilted 50° toward the fingers, so it points along the
+  thrust in the stab clip.
+- `tests/CharacterAnimationTests.cs` checks that the knife lands on the right-hand bone.
+
 ## Current clips
 
 | Move | Clip | Slice | Plays in |

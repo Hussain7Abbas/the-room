@@ -44,5 +44,8 @@ Rock-paper-scissors: light beats a parry bait, heavy out-ranges light, and parry
 - Hits are tested against where the target **was on the attacker's screen**, using server-side
   rewind capped at 0.2 s. See [Networking](../architecture/networking.md#hit-detection-with-rewind).
 - The killfeed names the killer and the method (light / heavy / execute / ability name).
+- Every hit that **lands** plays a stab sound where the victim stands, as positional 3D audio, so
+  you can hear which way it came from. Heavies sound lower and louder. Parried and
+  spawn-protected swings are silent.
 - A 1.5 s death camera turns you toward your killer.
 - Swings, tells and deaths are shown from server broadcasts, so nothing you see is a guess.

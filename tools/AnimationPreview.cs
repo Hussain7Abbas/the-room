@@ -7,7 +7,7 @@ namespace TheRoom.Tools;
 /// Side-view preview of a character model playing every clip in the shared animation set,
 /// through the same CharacterModel code the game uses. Use it to check a new model before
 /// registering it: `make preview-animations MODEL=res://assets/characters/&lt;name&gt;/&lt;name&gt;.fbx`.
-/// Cycles idle, run, jump, light attack, heavy attack, then repeats.
+/// Cycles idle, run, jump, light attack, heavy attack, then repeats. --closeup frames the hands.
 /// </summary>
 public partial class AnimationPreview : Node3D
 {
@@ -21,15 +21,17 @@ public partial class AnimationPreview : Node3D
     public override void _Ready()
     {
         var modelPath = CharacterModel.DefaultModelPath;
+        var closeUp = false;
         foreach (var arg in OS.GetCmdlineUserArgs())
         {
             if (arg.StartsWith("--model="))
                 modelPath = arg["--model=".Length..];
+            closeUp |= arg == "--closeup"; // hands and the held prop, for seating the knife
         }
 
-        var camera = new Camera3D { Position = new Vector3(4.2f, 1.0f, 0f), Current = true };
+        var camera = new Camera3D { Position = closeUp ? new Vector3(1.4f, 1.3f, -0.6f) : new Vector3(4.2f, 1.0f, 0f), Current = true };
         AddChild(camera);
-        camera.LookAt(new Vector3(0f, 0.9f, 0f));
+        camera.LookAt(closeUp ? new Vector3(0f, 1.05f, -0.15f) : new Vector3(0f, 0.9f, 0f));
 
         AddChild(new DirectionalLight3D { RotationDegrees = new Vector3(-45f, 60f, 0f), ShadowEnabled = true });
         AddChild(new WorldEnvironment
@@ -45,7 +47,7 @@ public partial class AnimationPreview : Node3D
         AddChild(new MeshInstance3D { Mesh = new PlaneMesh { Size = new Vector2(6f, 6f) } });
 
         _set = GD.Load<HumanoidAnimationSet>(HumanoidAnimationSet.DefaultPath);
-        _model = CharacterModel.Create(GD.Load<PackedScene>(modelPath), _set, Height);
+        _model = CharacterModel.Create(GD.Load<PackedScene>(modelPath), _set, Height, GD.Load<PackedScene>(CharacterModel.DefaultHeldPropPath));
         AddChild(_model);
         GD.Print($"[Preview] {modelPath}");
     }

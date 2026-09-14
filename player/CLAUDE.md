@@ -29,7 +29,9 @@
 - Visuals:
   - `_model` (`animation/CharacterModel`) replaces the capsule when not headless;
   - tint and flash through `_bodyMaterials`;
-  - attack animations only ever play from the server's `BroadcastAttackCue`.
+  - attack animations only ever play from the server's `BroadcastAttackCue`;
+  - the stab sound plays only from `BroadcastHitSound`, sent when the server confirms a landed
+    hit in `ResolveMeleeAttack`. It's positional `AudioStreamPlayer3D`, and headless peers skip it.
 - Local input is ignored while `GameMenu.IsOpen`. Esc belongs to `ui/GameMenu`, not Player.
 - Identity (name + character) syncs with `AnnounceIdentity` / `ReceiveIdentity`, plus
   `RequestIdentity` for late joiners. MultiplayerSpawner doesn't replicate properties changed

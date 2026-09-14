@@ -75,4 +75,9 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
   - `docs/` (entry `docs/intro.md`): getting started, architecture, gameplay, characters & animation, lobby, UI, testing, deployment, and a detailed from-scratch `server-config.md`.
   - `CLAUDE.md` rules and code style at the root and in `core/`, `player/`, `abilities/`, `animation/`, `ui/` and `services/`, with self-update rules so docs change alongside code.
   - Public `README.md` crediting the Voidra team.
+- 2026-09-14 — **Zain texture, knife and stab sound.**
+  - Zain is textured through an external material on his FBX import, so every character using the model gets it. Textured bodies take a light 25% colour wash, and name labels carry the character colour.
+  - The user's "300 sword" OBJ was baked by `tools/bake_knife.gd` from 106 surfaces into 4, with real materials, a 45 cm length and the origin at the grip. It's attached to the standard `RightHand` bone of any humanoid, and the grip was seated from close-up renders.
+  - Every confirmed melee hit plays the stab as positional 3D audio at the victim, cued by the server.
+  - Verified: a networked bot match had 8 hit sounds on a rendering client and 0 errors. The new test checks the knife attachment, and all tests pass (7 game, 9 lobby).
 

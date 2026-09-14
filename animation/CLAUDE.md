@@ -27,6 +27,20 @@
   the strike lands at the end of the windup. Pick slices by rendering, with
   `make preview-animations`.
 
+## Held props
+
+- `CharacterModel.Create(..., heldProp)` attaches the prop to the `RightHand` bone (a
+  `BoneAttachment3D`) with inverse scale.
+- The grip offset lives in the prop's scene (`assets/props/knife/knife.tscn`), never in code.
+- The knife mesh is baked by `tools/bake_knife.gd` from `knife.obj` + `sword.mtl`. Keep both
+  source files; the bake reads the MTL material names.
+
+## Textures
+
+A model's texture comes through an external material on its FBX import
+(`assets/characters/zain/zain_material.tres`), not through code. `Player` tints textured
+materials only lightly (`TexturedTintStrength`).
+
 ## Rules
 
 - Never animate position from a clip; the server-authoritative body moves the character.

@@ -745,7 +745,52 @@ public partial class Player : CharacterBody3D
             }
         }
 
+        CueHitSound(victim.GlobalPosition + Vector3.Up, isHeavy || isExecute);
         RpcId(_peerId, nameof(ReceiveAttackResult), true, vId);
+    }
+
+    private const string StabSoundPath = "res://assets/audio/stab.mp3";
+    private static AudioStream? _stabSound;
+
+    /// <summary>Server (or practice): a melee hit just landed. Every client plays the stab where the
+    /// victim stands, as positional 3D audio, so you can hear which way a hit came from. Only for
+    /// hits the server confirmed, never a parried or protected swing.</summary>
+    private void CueHitSound(Vector3 at, bool heavy)
+    {
+        if (_isOffline)
+            PlayHitSound(at, heavy);
+        else if (_isServer)
+            Rpc(nameof(BroadcastHitSound), at, heavy);
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
+    private void BroadcastHitSound(Vector3 at, bool heavy)
+    {
+        if (_isServer || Multiplayer.GetRemoteSenderId() != 1)
+            return; // the dedicated server has no one to play it to
+        PlayHitSound(at, heavy);
+    }
+
+    private void PlayHitSound(Vector3 at, bool heavy)
+    {
+        if (DisplayServer.GetName() == "headless" || GetTree().CurrentScene is not Node root)
+            return;
+
+        _stabSound ??= GD.Load<AudioStream>(StabSoundPath);
+        var sound = new AudioStreamPlayer3D
+        {
+            Stream = _stabSound,
+            Position = at, // the scene root sits at the origin, and Position is safe before AddChild
+            // A little pitch spread so a flurry of hits doesn't sound like one clip on repeat;
+            // heavies land lower and louder.
+            PitchScale = (heavy ? 0.85f : 1f) * (float)GD.RandRange(0.93, 1.07),
+            VolumeDb = heavy ? 3f : 0f,
+            UnitSize = 8f,
+            MaxDistance = 60f,
+        };
+        root.AddChild(sound);
+        sound.Finished += sound.QueueFree;
+        sound.Play();
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
@@ -898,10 +943,22 @@ public partial class Player : CharacterBody3D
         AttachModel(_characterDef);
         if (_model is null || _characterDef.TintModel)
         {
+            // Full colour on untextured bodies (the capsule); only a light wash over a texture,
+            // which would otherwise be multiplied into blue or orange skin.
             foreach (var material in _bodyMaterials)
-                material.AlbedoColor = _characterDef.SilhouetteColor;
+            {
+                material.AlbedoColor = material.AlbedoTexture is null
+                    ? _characterDef.SilhouetteColor
+                    : Colors.White.Lerp(_characterDef.SilhouetteColor, TexturedTintStrength);
+            }
         }
+
+        // The name keeps the character's colour readable even when the body is textured.
+        if (NameLabel is not null)
+            NameLabel.Modulate = _characterDef.SilhouetteColor.Lightened(0.35f);
     }
+
+    private const float TexturedTintStrength = 0.25f;
 
     /// <summary>Swaps the grey-box capsule for the character's animated model. Skipped when
     /// headless (the dedicated server and --bot clients draw nothing), and if the model or
@@ -915,10 +972,11 @@ public partial class Player : CharacterBody3D
         var animations = def.Animations ?? GD.Load<HumanoidAnimationSet>(HumanoidAnimationSet.DefaultPath);
         if (modelScene is null || animations is null)
             return;
+        var heldProp = def.HeldProp ?? GD.Load<PackedScene>(CharacterModel.DefaultHeldPropPath);
 
         _model?.QueueFree();
         var capsuleHeight = GetNodeOrNull<CollisionShape3D>("CollisionShape3D")?.Shape is CapsuleShape3D capsule ? capsule.Height : 1.8f;
-        _model = CharacterModel.Create(modelScene, animations, capsuleHeight);
+        _model = CharacterModel.Create(modelScene, animations, capsuleHeight, heldProp);
         _model.Position = new Vector3(0f, -capsuleHeight / 2f, 0f); // the capsule is centred on the body origin
         AddChild(_model);
         _modelAnimations = animations;

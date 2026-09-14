@@ -5,11 +5,15 @@ A character is three things:
 | Part | Where | Owned by |
 |---|---|---|
 | **Identity and ability**: name, colour, ability, passive, spec answers | `abilities/CharacterRegistry.cs`, `characters/<id>/SPEC.md` | the developer the character caricatures (Pillar 3) |
-| **Model**: any humanoid FBX | `assets/characters/<id>/` | the art owner |
+| **Model**: any humanoid FBX, plus its texture | `assets/characters/<id>/` | the art owner |
+| **Held prop**: the knife in the right hand | `assets/props/knife/` | the team |
 | **Animations**: shared by everyone | `assets/animations/humanoid/` + `humanoid_default.tres` | the team |
 
-Today the only model is **Zain** (`assets/characters/zain/zain.fbx`, Mixamo-rigged). Every character
-without its own model uses Zain, tinted with the character's signature colour.
+Today the only model is **Zain** (`assets/characters/zain/zain.fbx`, Mixamo-rigged), textured by
+`zain_albedo.png` through `zain_material.tres`. Every character without its own model uses Zain.
+
+- The texture gets a light wash of the character's signature colour (25%), so skin stays skin.
+- The name label above each player shows the character colour at full strength.
 
 The shared animation set has **run, jump and stab**:
 
@@ -26,6 +30,7 @@ The shared animation set has **run, jump and stab**:
 
 - `animation/CharacterModel.cs` builds the visible body: scale, facing, materials, clip selection.
 - `animation/HumanoidAnimationSet.cs` is the resource mapping moves to clips.
-- `abilities/CharacterDef.cs` has the `Model`, `Animations` and `TintModel` fields.
+- `abilities/CharacterDef.cs` has the `Model`, `Animations`, `TintModel` and `HeldProp` fields.
 - `tests/CharacterAnimationTests.cs` checks that every clip can play on every model.
-- `tools/AnimationPreview.tscn`, run with `make preview-animations`.
+- `tools/AnimationPreview.tscn`, run with `make preview-animations` (add `CLOSEUP=1` for the hands and knife).
+- `tools/bake_knife.gd` rebuilds the knife mesh from its source OBJ.

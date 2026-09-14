@@ -38,6 +38,30 @@ Choose one of these:
 
 After import the skeleton is called `GeneralSkeleton` and uses standard bone names.
 
+## 3b. Texture it (if the FBX has no embedded texture)
+
+Mixamo downloads often lose the texture. Wire it through an **external material**, so every
+character using this model gets it:
+
+1. Copy the texture to `assets/characters/<id>/<id>_albedo.png`. In its `.import`, set
+   `compress/mode=2` (VRAM) and `mipmaps/generate=true`.
+2. Create `assets/characters/<id>/<id>_material.tres`, a `StandardMaterial3D` with
+   `albedo_texture` set to that PNG. Copy `zain_material.tres` as a starting point.
+3. In the model's `.import`, add a `"materials"` entry to `_subresources` that points the FBX's
+   material slot at it:
+
+   ```
+   "materials": {
+   "Material": {
+   "use_external/enabled": true,
+   "use_external/path": "res://assets/characters/<id>/<id>_material.tres"
+   }
+   },
+   ```
+
+   `Material` is the FBX's own slot name. Find yours in the Advanced Import dialog.
+4. Reimport and check it with `make preview-animations`.
+
 ## 4. Look at it
 
 ```bash
@@ -56,7 +80,8 @@ In `abilities/CharacterRegistry.cs`, on the character's `CharacterDef`:
 
 ```csharp
 Model = GD.Load<PackedScene>("res://assets/characters/<id>/<id>.fbx"),
-TintModel = false, // set this if the model has its own textures (otherwise the colour tints them)
+TintModel = false, // optional: textured models only get a light colour wash; false shows the texture untouched
+HeldProp = GD.Load<PackedScene>("res://assets/props/<prop>.tscn"), // optional: defaults to the knife
 ```
 
 ## 6. Test
