@@ -18,7 +18,9 @@
 - `UiTheme.cs`: the single theme (colours, styleboxes, type variations `AccentButton`,
   `NavButton`, `GhostButton`, `Card`, `Muted`, `Heading`, `Title`) and small builders.
 - `ModalDialog.cs`: base popup (dim background, title, Close, Esc closes it first).
-  `SettingsDialog.cs` has the Display tab (display mode) and the Controls tab: the bindings of
+  `SettingsDialog.cs` has four tabs: Display (display mode), Graphics (texture quality,
+  `GameSettings.ApplyTextureQuality`), Sound (Main/Music/Effects sliders, `core/GameAudio`) and
+  Controls: the bindings of
   the device in use (`core/InputDevices`), rebindable (`core/InputBindings`), rebuilt when the
   device changes. `InputGlyphs.cs` turns a binding into a key cap (layout-aware key name) or a
   controller icon (Kenney CC0 prompts in `assets/ui/input/{xbox,playstation}/`); use it anywhere

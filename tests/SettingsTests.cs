@@ -77,6 +77,40 @@ public class SettingsTests : TestClass
     }
 
     [Test]
+    public void TextureQualityDefaultsToMid()
+    {
+        GameSettings.ParseTextureQuality(null).ShouldBe(GameSettings.TextureQuality.Mid);
+        GameSettings.ParseTextureQuality("nonsense").ShouldBe(GameSettings.TextureQuality.Mid);
+        GameSettings.ParseTextureQuality(" Low ").ShouldBe(GameSettings.TextureQuality.Low);
+        GameSettings.ParseTextureQuality("high").ShouldBe(GameSettings.TextureQuality.High);
+    }
+
+    /// <summary>Volumes round-trip through settings.cfg, and the buses the sliders drive exist.</summary>
+    [Test]
+    public void VolumesSaveAndBusesExist()
+    {
+        var realFile = GameSettings.FilePath;
+        GameSettings.FilePath = "user://settings-audio-test.cfg";
+        try
+        {
+            GameAudio.GetVolume(GameAudio.Channel.Music).ShouldBe(GameAudio.DefaultVolume(GameAudio.Channel.Music));
+            GameAudio.SetVolume(GameAudio.Channel.Effects, 0.25f);
+            GameAudio.GetVolume(GameAudio.Channel.Effects).ShouldBe(0.25f, 0.001f);
+            GameAudio.SetVolume(GameAudio.Channel.Music, 7f);
+            GameAudio.GetVolume(GameAudio.Channel.Music).ShouldBe(1f); // clamped
+            AudioServer.GetBusIndex(GameAudio.MusicBus).ShouldBeGreaterThan(0);
+            AudioServer.GetBusIndex(GameAudio.EffectsBus).ShouldBeGreaterThan(0);
+        }
+        finally
+        {
+            DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(GameSettings.FilePath));
+            GameSettings.FilePath = realFile;
+            foreach (var channel in new[] { GameAudio.Channel.Main, GameAudio.Channel.Music, GameAudio.Channel.Effects })
+                GameAudio.SetVolume(channel, GameAudio.GetVolume(channel)); // re-apply the player's own
+        }
+    }
+
+    [Test]
     public void SavingOneSectionKeepsTheOthers()
     {
         // The bug this guards against: the menu used to save name/character into a fresh

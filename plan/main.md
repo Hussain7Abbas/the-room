@@ -125,3 +125,7 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
   - Default pad bindings in project.godot (left stick move, right stick look, RB/RT light/heavy, B dodge, LT sprint, A jump, Y ability, View scoreboard, Start menu via new `pause_menu`).
   - Settings → Controls shows and rebinds the current device's bindings (`core/InputBindings`, swaps on conflict, per-device reset, saved in settings.cfg). Kenney CC0 button icons (`ui/InputGlyphs`), also on the HUD ability badge.
   - Verbs are polled (triggers stream events). Camera faces the centre after spawn/revive. Practice whiffs no longer log an RpcId-to-self error.
+- 2026-09-15 — Sound, effects and graphics settings:
+  - `core/GameAudio` autoload: Music/Effects buses, quiet looping music (EmptyCity by yd, CC0), sound effects by name (Kenney CC0: stab, swing, jump, land, step, roll, kick, death, menu click). Settings → Sound: Main/Music/Effects.
+  - `effects/Fx`: blood spray + floor drop decals that vanish after 3 s; dust puffs for jump, landing (scaled by fall speed), sprint steps, roll trail, drop kick (Kenney Particle Pack, CC0).
+  - Settings → Graphics: Texture Quality Low/Mid/High (default Mid): mipmap bias + anisotropic filtering.

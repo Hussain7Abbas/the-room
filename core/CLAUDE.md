@@ -9,6 +9,7 @@
 | Autoload | File | Role |
 |---|---|---|
 | `InputDevices` | `InputDevices.cs` | Current device (keyboard / Xbox / PlayStation, switched by any press), applies saved bindings (`InputBindings.cs`), gamepad focus for menus |
+| `GameAudio` | `GameAudio.cs` | Music + Effects buses (under Master), saved volumes, looping music, `Play3D`/`PlayUi` sound effects, menu click on every button |
 | `Events` | `Events.cs` | Signal bus: PlayerConnected/Disconnected/Spawned/Killed, MatchAnnouncement |
 | `Tuning` | `TuningService.cs` | Loads `tuning/tuning.tres` |
 | `Net` | `Net.cs` | Session state machine (None / Offline / Server / Client), ENet, CLI flags, scene switching |
@@ -22,7 +23,8 @@ Not autoloads: `Main.cs`/`Main.tscn` (the game scene), `KillfeedUI`, `DebugOverl
 (the menu's static HTTP client), `InputBindings.cs` (rebinding: `[bindings_keyboard]` and
 `[bindings_controller]` in settings.cfg over project.godot's defaults), and `GameSettings.cs` (`user://settings.cfg`: always
 load → change → save, so no section wipes another; display mode is applied at menu start and
-skipped when headless or movie-writing).
+skipped when headless or movie-writing; texture quality is applied to the root viewport at menu
+start and in `Main._Ready`).
 
 ## Rules
 

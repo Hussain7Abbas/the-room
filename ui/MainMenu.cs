@@ -69,6 +69,7 @@ public partial class MainMenu : Control
         // --connect clients get it too. Headless servers and bots skip it inside.
         if (!Net.Instance.IsServer)
             GameSettings.ApplySavedDisplayMode();
+        GameSettings.ApplySavedTextureQuality(GetViewport());
 
         // --server / --connect: no menu, straight into the game scene.
         if (Net.Instance.Mode != Net.SessionMode.None || Net.Instance.Pending is not null)
@@ -490,6 +491,8 @@ public partial class MainMenu : Control
         {
             if (arg == "--menu-open=settings") AddChild(new SettingsDialog());
             if (arg == "--menu-open=controls") AddChild(new SettingsDialog(SettingsDialog.Tab.Controls));
+            if (arg == "--menu-open=graphics") AddChild(new SettingsDialog(SettingsDialog.Tab.Graphics));
+            if (arg == "--menu-open=sound") AddChild(new SettingsDialog(SettingsDialog.Tab.Sound));
             if (arg == "--menu-open=about") AddChild(new AboutDialog());
         }
     }

@@ -13,6 +13,7 @@ public static class GameSettings
     public static string FilePath { get; set; } = "user://settings.cfg";
 
     public enum DisplayMode { Maximized, Windowed, Fullscreen }
+    public enum TextureQuality { Low, Mid, High }
 
     public static ConfigFile Load()
     {
@@ -43,6 +44,49 @@ public static class GameSettings
     }
 
     public static void ApplySavedDisplayMode() => ApplyDisplayMode(GetDisplayMode());
+
+    public static TextureQuality GetTextureQuality() =>
+        ParseTextureQuality(Load().GetValue("graphics", "texture_quality", "mid").AsString());
+
+    public static TextureQuality ParseTextureQuality(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "low" => TextureQuality.Low,
+        "high" => TextureQuality.High,
+        _ => TextureQuality.Mid, // the default
+    };
+
+    /// <summary>Saves the quality and applies it right away.</summary>
+    public static void SetTextureQuality(TextureQuality quality, Viewport viewport)
+    {
+        var config = Load();
+        config.SetValue("graphics", "texture_quality", quality.ToString().ToLowerInvariant());
+        Save(config);
+        ApplyTextureQuality(quality, viewport);
+    }
+
+    public static void ApplySavedTextureQuality(Viewport viewport) => ApplyTextureQuality(GetTextureQuality(), viewport);
+
+    /// <summary>
+    /// The mipmap bias picks smaller (Low: softer, lighter on a weak GPU's bandwidth) or sharper
+    /// versions of every texture. Anisotropic filtering keeps floors and walls crisp at a slant; the
+    /// arena's materials use the anisotropic filter so the level applies. The root viewport
+    /// outlives scenes, so applying once at launch covers the menu and every match.
+    /// </summary>
+    public static void ApplyTextureQuality(TextureQuality quality, Viewport viewport)
+    {
+        viewport.TextureMipmapBias = quality switch
+        {
+            TextureQuality.Low => 1.5f,
+            TextureQuality.High => -0.25f,
+            _ => 0f,
+        };
+        viewport.AnisotropicFilteringLevel = quality switch
+        {
+            TextureQuality.Low => Viewport.AnisotropicFiltering.Disabled,
+            TextureQuality.High => Viewport.AnisotropicFiltering.Anisotropy16X,
+            _ => Viewport.AnisotropicFiltering.Anisotropy4X,
+        };
+    }
 
     public static void ApplyDisplayMode(DisplayMode mode)
     {

@@ -80,7 +80,7 @@ public partial class InputDevices : Node
         GD.Print($"[Input] Now using {device}{(IsGamepad ? $" ({Input.GetJoyName(joypad)})" : "")}.");
         if (IsGamepad != wasGamepad)
         {
-            foreach (var node in GetTree().Root.FindChildren("*", "BaseButton", true, false))
+            foreach (var node in GetTree().Root.FindChildren("*", "Control", true, false))
                 SetFocusable(node);
             if (IsGamepad)
                 _focusCheckIn = 0;
@@ -98,6 +98,8 @@ public partial class InputDevices : Node
         // a popup); everything else follows the device.
         if (node is Button button and not OptionButton)
             button.FocusMode = IsGamepad ? Control.FocusModeEnum.All : Control.FocusModeEnum.None;
+        else if (node is Slider slider) // Settings → Sound: left/right on the D-pad moves it
+            slider.FocusMode = IsGamepad ? Control.FocusModeEnum.All : Control.FocusModeEnum.None;
     }
 
     /// <summary>Focuses the first button of the top-most open dialog, or of the screen.</summary>

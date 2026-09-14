@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Godot;
+using TheRoom.Effects;
 using TheRoom.Abilities;
 using TheRoom.Animation;
 using TheRoom.Config;
@@ -799,8 +800,14 @@ public partial class Player : CharacterBody3D
         PlayDodgeAnimation();
     }
 
-    private void PlayDodgeAnimation() =>
+    private void PlayDodgeAnimation()
+    {
         _model?.PlayOneShot(CharacterModel.Clip.Dodge, TuningService.Instance.DodgeDuration);
+        // Every copy that shows the roll also hears it and kicks up dust along it (UpdateMovementFx).
+        _rollFxRemaining = TuningService.Instance.DodgeDuration;
+        GameAudio.Play3D(this, "roll", GlobalPosition, -2f);
+        Fx.Dust(this, GlobalPosition, 0.8f);
+    }
 
     /// <summary>Server-only (and offline-solo): advances windup/recovery/dodge/stagger/execute
     /// timers and resolves the attack the instant a windup completes.</summary>
@@ -965,7 +972,7 @@ public partial class Player : CharacterBody3D
             }
         }
 
-        CueHitSound(victim.GlobalPosition + Vector3.Up, isHeavy || isExecute);
+        CueHitSound(StrikeContactPoint(victim, KnifeHandHeight), forward, isHeavy || isExecute);
         SendAttackResult(true, vId);
     }
 
@@ -991,53 +998,56 @@ public partial class Player : CharacterBody3D
             victim._combatState = CombatState.Staggered;
             victim._stateTimer = TuningService.Instance.HeavyStaggerDuration;
         }
-        CueHitSound(victim.GlobalPosition + Vector3.Up, heavy: true);
+        CueHitSound(StrikeContactPoint(victim, KickHeight), victim.GlobalPosition - GlobalPosition, heavy: true);
         GD.Print($"[Combat] {Main.GetPlayerName(_peerId)} hit {Main.GetPlayerName(vId)} with {method} ({damage:F0}).");
         return true;
     }
 
-    private const string StabSoundPath = "res://assets/audio/stab.mp3";
-    private static AudioStream? _stabSound;
 
     /// <summary>Server (or practice): a melee hit just landed. Every client plays the stab where the
     /// victim stands, as positional 3D audio, so you can hear which way a hit came from. Only for
     /// hits the server confirmed, never a dodged or protected swing.</summary>
-    private void CueHitSound(Vector3 at, bool heavy)
+    // Heights above a player's origin, which is the middle of its 1.8 m capsule (feet at -0.9).
+    private const float KnifeHandHeight = 0.2f; // the knife hand at the moment of a stab
+    private const float KickHeight = 0.1f;      // the drop kick's feet meet the body a little lower
+    private const float CapsuleRadius = 0.4f;   // Player.tscn
+
+    /// <summary>Where the blow meets the victim: on the surface of the victim's capsule, on the
+    /// side facing the attacker, at the attacker's striking height. The server is headless (no
+    /// knife mesh to read), so it's worked out from the two bodies.</summary>
+    private Vector3 StrikeContactPoint(Player victim, float heightAboveOrigin)
+    {
+        var toAttacker = GlobalPosition - victim.GlobalPosition;
+        toAttacker.Y = 0f;
+        toAttacker = toAttacker.LengthSquared() > 0.0001f ? toAttacker.Normalized() : GlobalTransform.Basis.Z;
+        var contact = victim.GlobalPosition + toAttacker * CapsuleRadius;
+        contact.Y = GlobalPosition.Y + heightAboveOrigin;
+        return contact;
+    }
+
+    /// <summary>Server: a hit landed. Every client hears the stab and sees the blood, sprayed from
+    /// the contact point the way the blow was going (<paramref name="direction"/>).</summary>
+    private void CueHitSound(Vector3 at, Vector3 direction, bool heavy)
     {
         if (_isOffline)
-            PlayHitSound(at, heavy);
+            PlayHitEffects(at, direction, heavy);
         else if (_isServer)
-            Rpc(nameof(BroadcastHitSound), at, heavy);
+            Rpc(nameof(BroadcastHitSound), at, direction, heavy);
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
-    private void BroadcastHitSound(Vector3 at, bool heavy)
+    private void BroadcastHitSound(Vector3 at, Vector3 direction, bool heavy)
     {
         if (_isServer || Multiplayer.GetRemoteSenderId() != 1)
             return; // the dedicated server has no one to play it to
-        PlayHitSound(at, heavy);
+        PlayHitEffects(at, direction, heavy);
     }
 
-    private void PlayHitSound(Vector3 at, bool heavy)
+    private void PlayHitEffects(Vector3 at, Vector3 direction, bool heavy)
     {
-        if (DisplayServer.GetName() == "headless" || GetTree().CurrentScene is not Node root)
-            return;
-
-        _stabSound ??= GD.Load<AudioStream>(StabSoundPath);
-        var sound = new AudioStreamPlayer3D
-        {
-            Stream = _stabSound,
-            Position = at, // the scene root sits at the origin, and Position is safe before AddChild
-            // A little pitch spread so a flurry of hits doesn't sound like one clip on repeat;
-            // heavies land lower and louder.
-            PitchScale = (heavy ? 0.85f : 1f) * (float)GD.RandRange(0.93, 1.07),
-            VolumeDb = heavy ? 3f : 0f,
-            UnitSize = 8f,
-            MaxDistance = 60f,
-        };
-        root.AddChild(sound);
-        sound.Finished += sound.QueueFree;
-        sound.Play();
+        // Heavies land lower and louder.
+        GameAudio.Play3D(this, "stab", at, heavy ? 3f : 0f, heavy ? 0.85f : 1f);
+        Fx.Blood(this, at, direction, heavy);
     }
 
     /// <summary>In practice the attacker is this process, and Godot refuses an RpcId to yourself
@@ -1105,6 +1115,7 @@ public partial class Player : CharacterBody3D
             _model.PlayDeath(_modelAnimations.DeathDuration);
         else
             SpawnDeathEffect(deathPosition);
+        GameAudio.Play3D(this, "death", deathPosition);
 
         if (_isOwner && victimId == _peerId)
         {
@@ -1312,6 +1323,67 @@ public partial class Player : CharacterBody3D
         _lastVisualPosition = GlobalPosition;
 
         _model.UpdateLocomotion(delta, velocity, onFloor);
+        UpdateMovementFx(delta, velocity, onFloor);
+    }
+
+    private bool _fxWasOnFloor = true;
+    private float _fxFallSpeed; // fastest downward speed in the current airtime
+    private float _fxStepTimer;
+    private float _fxDustTimer;
+    private float _rollFxRemaining;
+
+    /// <summary>Jump, landing, footstep and dust cues. Every copy derives them from how the body
+    /// moves (remote players from their interpolated motion, as the animations are), so nothing
+    /// extra crosses the network. Only copies with a model (not headless) get here.</summary>
+    private void UpdateMovementFx(float delta, Vector3 velocity, bool onFloor)
+    {
+        if (!onFloor)
+            _fxFallSpeed = Mathf.Max(_fxFallSpeed, -velocity.Y);
+        if (_fxWasOnFloor && !onFloor && velocity.Y > 1f)
+        {
+            GameAudio.Play3D(this, "jump", GlobalPosition, -6f);
+            Fx.Dust(this, GlobalPosition, 0.4f);
+        }
+        else if (!_fxWasOnFloor && onFloor)
+        {
+            // Any height: a hop is a soft puff, a drop off a deck a big one.
+            var impact = Mathf.Clamp(_fxFallSpeed / 6f, 0.3f, 2f);
+            GameAudio.Play3D(this, "land", GlobalPosition, Mathf.Lerp(-10f, 2f, impact / 2f));
+            Fx.Dust(this, GlobalPosition, impact);
+            _fxFallSpeed = 0f;
+        }
+        _fxWasOnFloor = onFloor;
+
+        if (_rollFxRemaining > 0f)
+        {
+            _rollFxRemaining -= delta;
+            _fxDustTimer -= delta;
+            if (_fxDustTimer <= 0f && onFloor)
+            {
+                _fxDustTimer = 0.09f;
+                Fx.Dust(this, GlobalPosition, 0.45f);
+            }
+            return;
+        }
+
+        var horizontal = new Vector2(velocity.X, velocity.Z);
+        if (!onFloor || horizontal.Length() < 1.5f)
+        {
+            _fxStepTimer = Mathf.Min(_fxStepTimer, 0.1f); // the first step comes quickly
+            return;
+        }
+        // Faster than walking pace (MoveSpeed) by a margin: a sprint, which scuffs up dust.
+        var sprinting = horizontal.Length() > MoveSpeed * 1.25f;
+        _fxStepTimer -= delta;
+        if (_fxStepTimer > 0f)
+            return;
+        _fxStepTimer = sprinting ? 0.27f : 0.36f;
+        GameAudio.Play3D(this, "step", GlobalPosition, sprinting ? -8f : -13f);
+        if (sprinting)
+        {
+            var behind = new Vector3(horizontal.X, 0f, horizontal.Y).Normalized() * -0.3f;
+            Fx.Dust(this, GlobalPosition + behind, 0.3f);
+        }
     }
 
     /// <summary>Called when the server starts a light or heavy windup. The attack animation
@@ -1335,6 +1407,7 @@ public partial class Player : CharacterBody3D
 
     private void PlayAttackAnimation(bool heavy)
     {
+        GameAudio.Play3D(this, "swing", GlobalPosition + Vector3.Up * 1.2f, heavy ? 0f : -4f, heavy ? 0.85f : 1f);
         if (_model is null || _modelAnimations is null)
             return;
         _model.PlayOneShot(heavy ? CharacterModel.Clip.HeavyAttack : CharacterModel.Clip.LightAttack,
@@ -1414,6 +1487,18 @@ public partial class Player : CharacterBody3D
             && _model.PlayOneShot(CharacterModel.Clip.Ability, _modelAnimations.AbilityDuration);
         if (!actedOut)
             _abilityTellRemaining = tellSeconds;
+
+        // The feet come down just after the tell (the lunge is short): a thump and a dust burst.
+        if (DisplayServer.GetName() != "headless")
+        {
+            GetTree().CreateTimer(tellSeconds + 0.12).Timeout += () =>
+            {
+                if (!IsInstanceValid(this) || !IsInsideTree())
+                    return;
+                GameAudio.Play3D(this, "kick", GlobalPosition, 2f);
+                Fx.Dust(this, GlobalPosition, 1.4f);
+            };
+        }
 
         if (_isOwner)
             _abilityReadyAt = Time.GetTicksMsec() / 1000.0 + tellSeconds + AbilityCooldownTotal;

@@ -23,6 +23,19 @@ them anyway.
 [Input Prompts](https://kenney.nl/assets/input-prompts) by Kenney, CC0. The Xbox and PlayStation
 icons we use are in `assets/ui/input/` (license in `LICENSE-kenney.txt`).
 
+## Effects textures (Kenney, CC0)
+
+Blood drops, droplets and dust puffs use textures from Kenney's
+[Particle Pack](https://kenney.nl/assets/particle-pack), CC0, in `assets/effects/textures/`.
+
+## Sound (CC0)
+
+| Sound | Source | Where |
+|---|---|---|
+| Background music: "EmptyCity" by yd | [OpenGameArt](https://opengameart.org/content/emptycity-background-music), CC0 | `assets/audio/music/empty_city.ogg` |
+| Swing, jump, roll (knife slices, cloth) | Kenney [RPG Audio](https://kenney.nl/assets/rpg-audio), CC0 | `assets/audio/sfx/` |
+| Landing, footsteps, kick, death, menu click | Kenney [Impact Sounds](https://kenney.nl/assets/impact-sounds), CC0 | `assets/audio/sfx/` |
+
 ## Characters
 
 - Character model and animations from [Mixamo](https://www.mixamo.com).

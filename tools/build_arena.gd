@@ -90,6 +90,8 @@ func _tex_material(tex: String, scale: float) -> StandardMaterial3D:
 	m.uv1_triplanar = true
 	m.uv1_world_triplanar = true
 	m.uv1_scale = Vector3.ONE * scale
+	# Anisotropic, so Settings → Graphics → Texture Quality's filtering level applies.
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	return m
 
 ## A solid block (visual + collider) with its bottom-centre at `pos`.

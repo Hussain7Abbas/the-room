@@ -9,12 +9,15 @@ namespace TheRoom.UI;
 /// Settings, opened from the main menu and the in-game Esc menu.
 ///   Display: Display Mode (Maximized by default, Windowed, Fullscreen). It applies immediately and
 ///            is saved, and MainMenu re-applies it at every launch (core/GameSettings.cs).
+///   Graphics: Texture Quality (Low, Mid by default, High): mipmap bias + anisotropic filtering,
+///             applied at once and at every launch (core/GameSettings.cs).
+///   Sound:    Main (everything), Music and Effects volumes (core/GameAudio.cs buses).
 ///   Controls: the bindings of the device in use (keyboard and mouse, or an Xbox/PlayStation
 ///             controller with its button icons), rebindable (core/InputBindings.cs).
 /// </summary>
 public partial class SettingsDialog : ModalDialog
 {
-    public enum Tab { Display, Controls }
+    public enum Tab { Display, Graphics, Controls, Sound }
 
     private static readonly (string Label, GameSettings.DisplayMode Mode)[] DisplayModes =
     {
@@ -64,9 +67,9 @@ public partial class SettingsDialog : ModalDialog
         var tabRow = new HBoxContainer();
         tabRow.AddThemeConstantOverride("separation", 4);
         var group = new ButtonGroup();
-        foreach (var tab in new[] { Tab.Display, Tab.Controls })
+        foreach (var tab in new[] { Tab.Display, Tab.Graphics, Tab.Controls, Tab.Sound })
         {
-            var button = UiTheme.Button(tab == Tab.Display ? "Display" : "Controls", "TabButton", () => ShowTab(tab));
+            var button = UiTheme.Button(tab.ToString(), "TabButton", () => ShowTab(tab));
             button.ToggleMode = true;
             button.ButtonGroup = group;
             _tabs[tab] = button;
@@ -75,7 +78,9 @@ public partial class SettingsDialog : ModalDialog
         Body.AddChild(tabRow);
 
         _pages[Tab.Display] = BuildDisplayPage();
+        _pages[Tab.Graphics] = BuildGraphicsPage();
         _pages[Tab.Controls] = BuildControlsPage();
+        _pages[Tab.Sound] = BuildSoundPage();
         foreach (var page in _pages.Values)
             Body.AddChild(page);
 
@@ -113,6 +118,84 @@ public partial class SettingsDialog : ModalDialog
 
         page.AddChild(row);
         return page;
+    }
+
+    private static readonly (string Label, GameSettings.TextureQuality Quality)[] TextureQualities =
+    {
+        ("Low", GameSettings.TextureQuality.Low),
+        ("Mid", GameSettings.TextureQuality.Mid),
+        ("High", GameSettings.TextureQuality.High),
+    };
+
+    /// <summary>A setting: title and help text on the left, its control on the right.</summary>
+    private static HBoxContainer SettingRow(string title, string help, Control control)
+    {
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 16);
+        var text = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        text.AddChild(UiTheme.Label(title, fontSize: 17));
+        var helpLabel = UiTheme.Label(help, "Muted", fontSize: 13);
+        helpLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        text.AddChild(helpLabel);
+        row.AddChild(text);
+        control.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        row.AddChild(control);
+        return row;
+    }
+
+    private static Control BuildGraphicsPage()
+    {
+        var page = new VBoxContainer { CustomMinimumSize = new Vector2(0, 360) };
+        page.AddThemeConstantOverride("separation", 10);
+        var picker = new OptionButton { CustomMinimumSize = new Vector2(180, 0), FocusMode = FocusModeEnum.None };
+        foreach (var (label, _) in TextureQualities)
+            picker.AddItem(label);
+        var current = GameSettings.GetTextureQuality();
+        picker.Selected = System.Array.FindIndex(TextureQualities, q => q.Quality == current);
+        picker.ItemSelected += index =>
+            GameSettings.SetTextureQuality(TextureQualities[index].Quality, ((SceneTree)Engine.GetMainLoop()).Root);
+        page.AddChild(SettingRow("Texture Quality",
+            "Low softens textures for weaker graphics cards. High keeps floors and walls sharp even at a slant. Mid is the default.",
+            picker));
+        return page;
+    }
+
+    private static Control BuildSoundPage()
+    {
+        var page = new VBoxContainer { CustomMinimumSize = new Vector2(0, 360) };
+        page.AddThemeConstantOverride("separation", 18);
+        page.AddChild(VolumeRow(GameAudio.Channel.Main, "Main Volume", "Everything you hear: music and effects together."));
+        page.AddChild(VolumeRow(GameAudio.Channel.Music, "Music", "The background music."));
+        page.AddChild(VolumeRow(GameAudio.Channel.Effects, "Effects", "Stabs, swings, jumps, landings, rolls, kicks, footsteps and menu clicks."));
+        return page;
+    }
+
+    private static HBoxContainer VolumeRow(GameAudio.Channel channel, string title, string help)
+    {
+        var box = new HBoxContainer();
+        box.AddThemeConstantOverride("separation", 10);
+        var slider = new HSlider
+        {
+            MinValue = 0,
+            MaxValue = 100,
+            Step = 1,
+            CustomMinimumSize = new Vector2(190, 0),
+            SizeFlagsVertical = SizeFlags.ShrinkCenter,
+            FocusMode = InputDevices.IsGamepad ? FocusModeEnum.All : FocusModeEnum.None,
+        };
+        var value = UiTheme.Label("", fontSize: 14);
+        value.CustomMinimumSize = new Vector2(44, 0);
+        value.HorizontalAlignment = HorizontalAlignment.Right;
+        slider.Value = Mathf.Round(GameAudio.GetVolume(channel) * 100f);
+        value.Text = $"{slider.Value:0}%";
+        slider.ValueChanged += v =>
+        {
+            value.Text = $"{v:0}%";
+            GameAudio.SetVolume(channel, (float)v / 100f);
+        };
+        box.AddChild(slider);
+        box.AddChild(value);
+        return SettingRow(title, help, box);
     }
 
     private Control BuildControlsPage()

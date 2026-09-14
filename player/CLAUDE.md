@@ -43,8 +43,12 @@
   - `_model` (`animation/CharacterModel`) replaces the capsule when not headless;
   - tint and flash through `_bodyMaterials`;
   - attack animations only ever play from the server's `BroadcastAttackCue`;
-  - the stab sound plays only from `BroadcastHitSound`, sent when the server confirms a landed
-    hit in `ResolveMeleeAttack`. It's positional `AudioStreamPlayer3D`, and headless peers skip it.
+  - the stab sound and the blood (`effects/Fx.Blood`) play only from `BroadcastHitSound`, sent
+    when the server confirms a landed hit, with the blow's direction;
+  - swing, roll, kick and death sounds ride the existing cues (`BroadcastAttackCue`,
+    `PlayDodgeAnimation`, `ReceiveAbilityTell`, `BroadcastKill`);
+  - jump, landing, footsteps and dust are derived per copy in `UpdateMovementFx` from motion,
+    never networked. Sounds go through `GameAudio.Play3D` (Effects bus); both skip headless.
 - **Timers that drive visuals count down on every copy** (top of `_PhysicsProcess`), and the server
   sets and cancels them with a broadcast (`SetSpawnProtection`). A timer that only ticks on the
   server leaves clients stuck: the "white character" bug.

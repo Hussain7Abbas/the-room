@@ -18,6 +18,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 InputDevices="*res://core/InputDevices.cs"
+GameAudio="*res://core/GameAudio.cs"
 Events="*res://core/Events.cs"
 Tuning="*res://core/TuningService.cs"
 Net="*res://core/Net.cs"
