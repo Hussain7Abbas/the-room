@@ -5,7 +5,8 @@ in code**, not just in reviews.
 
 ## The grammar
 
-Every ability follows: **input → tell (≥ 0.3 s, visible) → effect → end → cooldown (12–25 s)**.
+Every ability follows: **input → tell (≥ 0.3 s, visible) → effect → end → cooldown (7–25 s)**.
+The minimum was 12 s; it was lowered to 7 s for Zain's Drop Kick (decision D8 in `plan/main.md`).
 
 - `abilities/Ability.cs` refuses to activate an ability whose tell is too short or whose cooldown
   is out of range.
@@ -19,7 +20,7 @@ Every ability follows: **input → tell (≥ 0.3 s, visible) → effect → end 
 
 | Character | Ability | Slot | Effect | Cooldown |
 |---|---|---|---|---|
-| `zain` | **Drop Kick** | Burst (damage, weak: movement) | After a 0.45 s leap (the drop-kick animation is the tell; there's no colour flash), lunges up to 3.5 m and both feet hit whoever is straight ahead for **2× a light hit** (70), with a stagger. Dodgeable. | 14 s |
+| `zain` | **Drop Kick** | Burst (damage, weak: movement) | After a 0.45 s leap (the drop-kick animation is the tell; there's no colour flash), lunges up to 3.5 m and both feet hit whoever is straight ahead for **2× a light hit** (70), with a stagger. Dodgeable. | 7 s |
 | `firepatch` | Fire Patch | Zone Denial | After a 0.3 s tell, throws an 8 m arc and leaves a 2.5 m zone dealing 20 damage/s for 4 s | 18 s |
 
 Zain is the team's own character: the model every character uses, and the drop kick the team

@@ -5,7 +5,7 @@ namespace TheRoom.UI;
 
 /// <summary>
 /// Top-left HUD for the local player (core/Main.tscn, clients only):
-///   - name in the character's colour, and HP as numbers;
+///   - your player name in the character's colour (character name beside it), and HP as numbers;
 ///   - red health bar with a trailing "chip" after each hit, pulsing when low;
 ///   - green stamina bar under it (sprint and dodge spend it), amber while exhausted;
 ///   - the ability tile: key, a cooldown shade that drains as it recharges, the seconds left,
@@ -23,6 +23,7 @@ public partial class PlayerHud : CanvasLayer
 
     private Control _panel = null!;
     private Label _name = null!;
+    private Label _character = null!;
     private Label _hp = null!;
     private HudBar _health = null!;
     private HudBar _stamina = null!;
@@ -77,8 +78,12 @@ public partial class PlayerHud : CanvasLayer
         row.AddChild(bars);
 
         var header = new HBoxContainer();
+        header.AddThemeConstantOverride("separation", 8);
         _name = UiTheme.Label("", "Heading", fontSize: 17);
         header.AddChild(_name);
+        _character = UiTheme.Label("", "Muted", fontSize: 12);
+        _character.SizeFlagsVertical = Control.SizeFlags.ShrinkEnd;
+        header.AddChild(_character);
         header.AddChild(UiTheme.Spacer());
         _hp = UiTheme.Label("", fontSize: 13, color: new Color("#f1d9d6"));
         header.AddChild(_hp);
@@ -127,7 +132,9 @@ public partial class PlayerHud : CanvasLayer
         var def = p.Character;
         var t = Time.GetTicksMsec() / 1000f;
 
-        _name.Text = def?.DisplayName ?? p.DisplayName;
+        // Your name, big, in your character's colour; the character beside it, small.
+        _name.Text = string.IsNullOrEmpty(p.DisplayName) ? Core.Net.Instance.LocalPlayerName : p.DisplayName;
+        _character.Text = def?.DisplayName ?? "";
         if (def is not null)
             _name.AddThemeColorOverride("font_color", def.SilhouetteColor.Lightened(0.25f));
 

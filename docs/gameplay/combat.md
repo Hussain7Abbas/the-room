@@ -14,10 +14,10 @@ asks to use a verb. The numbers below are the current values in `tuning/tuning.t
 | **Light** (the normal hit) | Left mouse | 0.12 s windup, 2 m reach, **35% health**. 0.15 s recovery. |
 | **Heavy lunge** | Right mouse | 0.4 s windup (a visible tell), then lunges up to 3 m and hits for **52.5% health, 1.5× a light hit**. Staggers the victim 0.4 s. 0.6 s recovery, which is the punish window when it whiffs. |
 | **Execute** | Heavy from behind | A heavy that lands within 60° of the victim's back kills instantly. 0.6 s lock. |
-| **Dodge (roll)** | Cmd (Mac) / Ctrl | A 3.5 m roll in 0.55 s, in the direction you're moving (or facing, if standing still). **Strikes pass through you for the whole roll**: your hitbox is hidden, so a swing can still hit someone behind you. 1.2 s cooldown after the roll. Only from idle, so you can't roll out of your own attack's recovery. |
+| **Dodge (roll)** | Cmd (Mac) / Ctrl | A 3.5 m roll in 0.55 s, in the direction you're moving when you press it (or facing, if standing still). The direction is **locked for the whole roll**: letting go of the keys or pressing another direction doesn't bend or stop it. **Strikes pass through you for the whole roll**: your hitbox is hidden, so a swing can still hit someone behind you. No cooldown: you can roll again as soon as a roll ends, as long as you have the stamina (30 each). Only from idle, so you can't roll out of your own attack's recovery. |
 | **Sprint** | Shift (hold) | Move speed ×1.6 (6 → 9.6 m/s) while held. Costs stamina. |
 | **Jump** | Space | A small hop (about 0.8 m). Turn it off with `HopEnabled` for playtests. |
-| **Ability** | E | One per character, see [Abilities](abilities.md). Zain's Drop Kick hits for 2× a light hit. |
+| **Ability** | E | One per character, see [Abilities](abilities.md). Zain's Drop Kick hits for 2× a light hit, 7 s cooldown. |
 
 There is **no parry**: the dodge replaced it (decision D7 in `plan/main.md`).
 

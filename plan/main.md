@@ -40,6 +40,7 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
 | D5 | **Jump / hop** | ~~Build no-jump first~~ → **jump on Space, on by default** (user request after first play, 2026-09-14). Dash moved to Shift. | GDD §5.1 leaves it `TBD`; `Tuning.HopEnabled` still turns it off for an A/B. |
 | D6 | Git | Done — repo already initialized by the user, `origin` = `github.com/Hussain7Abbas/the-room`, one commit (`init`). Moved to the **Voidra** org on 2026-09-14: `github.com/Voidra-iq/the-room`. | Tuning file must be version-controlled per GDD §9. |
 | D7 | **Dodge replaces parry and dash** | User request 2026-09-14: a roll on Cmd/Ctrl with **invulnerability to strikes for the whole roll**; parry removed; Shift is a held sprint. | Deliberately departs from GDD §5.1 ("no i-frames"). Readability is kept by the roll being a big, animated, server-broadcast action with a cooldown. |
+| D8 | **Ability cooldown minimum 7 s** | User request 2026-09-14: Zain's Drop Kick recharges in 7 s. `AbilityCooldownMin` went from 12 to 7. | Relaxes the Character Spec's 12–25 s grammar; the validator enforces the new floor. |
 
 ## Change log
 - 2026-09-14 — v0.1 plan created.
@@ -108,4 +109,9 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
   - An ability with its own animation no longer flashes (Zain's kick), and practice now gets ability tells.
   - The debug overlay moved bottom-left (debug builds only, F3).
   - Verified: HUD frames from a networked match and stamina measured offline.
+- 2026-09-14 — **Dodge by stamina only, locked roll direction, 7 s Drop Kick, name in the HUD.**
+  - The dodge cooldown was removed (stamina is the only limit).
+  - The roll's direction is locked from the press to the end: owner, bots and the server all ignore turning mid-roll.
+  - Drop Kick cooldown 7 s (D8).
+  - The HUD shows the player's name, with the character beside it.
 

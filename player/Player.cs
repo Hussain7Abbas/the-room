@@ -458,6 +458,10 @@ public partial class Player : CharacterBody3D
     /// see the turn too.</summary>
     private void UpdateFacing(Vector3 worldDir, float delta)
     {
+        // Mid-roll the body keeps the direction the roll started in, whatever keys are held.
+        if (_dodgeTimeRemaining > 0f)
+            return;
+
         float? target = null;
         if (_aimLockRemaining > 0f)
         {
@@ -520,7 +524,7 @@ public partial class Player : CharacterBody3D
 
     private void RunServerPhysics(double delta)
     {
-        if (!IsDead)
+        if (!IsDead && _dodgeTimeRemaining <= 0f) // mid-roll the facing is locked to the roll's direction
             GlobalRotation = new Vector3(GlobalRotation.X, _serverPendingYaw, GlobalRotation.Z);
 
         if (!IsDead)
@@ -1552,7 +1556,8 @@ public partial class Player : CharacterBody3D
         {
             var lookBasis = Basis.LookingAt(toTarget.Normalized(), Vector3.Up);
             var desiredYaw = lookBasis.GetEuler().Y;
-            GlobalRotation = new Vector3(GlobalRotation.X, Mathf.LerpAngle(GlobalRotation.Y, desiredYaw, 0.1f), GlobalRotation.Z);
+            if (_dodgeTimeRemaining <= 0f) // bots too: no turning mid-roll
+                GlobalRotation = new Vector3(GlobalRotation.X, Mathf.LerpAngle(GlobalRotation.Y, desiredYaw, 0.1f), GlobalRotation.Z);
             _botMoveInput = new Vector2(0, -1); // "forward" per the move_forward/back convention below
         }
         else

@@ -78,7 +78,7 @@ public static class CharacterRegistry
             UsesCooldown = true,
             TellDescription = "Zain crouches and leaps for 0.45s before both feet land. The jump itself is the warning.",
             CounterplaySentence = "Roll or sidestep during the 0.45s leap: it only hits what is straight in front of him when he lands.",
-            DynamicCreated = "Zain can close 3.5m and hit twice as hard as a knife, so standing still in front of him is a gamble, but a whiffed kick puts him on a 14s cooldown right in your face.",
+            DynamicCreated = "Zain can close 3.5m and hit twice as hard as a knife, so standing still in front of him is a gamble, but a whiffed kick puts him on a 7s cooldown right in your face.",
             FailureCase = "Useless against anyone who rolls through it or isn't dead ahead; it's a straight line, and the leap announces it.",
         };
 

@@ -30,7 +30,7 @@ public partial class Tuning : Resource
     [ExportGroup("Dodge (roll)")]
     [Export] public float DodgeDuration = 0.55f;
     [Export] public float DodgeDistance = 3.5f;
-    [Export] public float DodgeCooldown = 1.2f; // after the roll ends
+    [Export] public float DodgeCooldown = 0f; // extra wait after the roll ends; 0 = stamina is the only limit
 
     [ExportGroup("Movement")]
     [Export] public float SprintSpeedMultiplier = 1.6f; // while Shift is held
@@ -82,7 +82,7 @@ public partial class Tuning : Resource
     [ExportGroup("Ability grammar — hard rules (CHARACTER-SPEC.md Part 1)")]
     [Export] public float MinAbilityTellTime = 0.3f;
     [Export] public float MaxControlEffectDuration = 1.0f;
-    [Export] public float AbilityCooldownMin = 12.0f;
+    [Export] public float AbilityCooldownMin = 7.0f; // lowered from 12 (user decision D8) for Zain's 7s Drop Kick
     [Export] public float AbilityCooldownMax = 25.0f;
 
     [ExportGroup("Networking")]

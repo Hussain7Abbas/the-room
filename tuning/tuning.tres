@@ -17,7 +17,7 @@ HeavyRecovery = 0.6
 HeavyStaggerDuration = 0.4
 DodgeDuration = 0.55
 DodgeDistance = 3.5
-DodgeCooldown = 1.2
+DodgeCooldown = 0.0
 SprintSpeedMultiplier = 1.6
 MaxStamina = 100.0
 SprintStaminaPerSecond = 22.0
@@ -48,7 +48,7 @@ DeathCamDuration = 1.5
 GoldenKnifePickupRadius = 2.5
 MinAbilityTellTime = 0.3
 MaxControlEffectDuration = 1.0
-AbilityCooldownMin = 12.0
+AbilityCooldownMin = 7.0
 AbilityCooldownMax = 25.0
 ServerTickRateHz = 30
 MaxRewindTimeSeconds = 0.2
@@ -67,7 +67,7 @@ AbilityNumbers = {
 "firepatch.duration": 4.0,
 "firepatch.damage_per_second": 20.0,
 "dropkick.tell_seconds": 0.45,
-"dropkick.cooldown": 14.0,
+"dropkick.cooldown": 7.0,
 "dropkick.range": 3.5,
 "dropkick.reach": 1.8,
 "dropkick.hit_radius": 1.2,

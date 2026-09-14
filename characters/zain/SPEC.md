@@ -21,10 +21,10 @@
 ~1.0s  lands and gets up (animation only)
 ```
 
-**Cooldown:** 14s
+**Cooldown:** 7s
 **Power budget:** strong = damage, weak = movement
 **Counterplay (one sentence):** Roll or sidestep during the 0.45s leap: it only hits what is straight in front of him when he lands.
-**What dynamic does this create in actual play?** Standing still in front of Zain is a gamble, but a whiffed kick puts him on a 14s cooldown right in your face.
+**What dynamic does this create in actual play?** Standing still in front of Zain is a gamble, but a whiffed kick puts him on a 7s cooldown right in your face.
 
 ### Passive quirk
 **Passive:** none yet.
