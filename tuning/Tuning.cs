@@ -1,0 +1,73 @@
+using Godot;
+
+namespace TheRoom.Config;
+
+/// <summary>
+/// The single source of truth for every gameplay number in the game (GDD §9 / CHARACTER-SPEC.md Part 4).
+/// Character/ability owners control *shape* (code); this file controls *strength* (numbers).
+/// Edit only the .tres instance (res://tuning/tuning.tres), never hardcode a number in gameplay code.
+/// </summary>
+[GlobalClass]
+public partial class Tuning : Resource
+{
+    [ExportGroup("Melee — Light")]
+    [Export] public float LightWindup = 0.12f;
+    [Export] public float LightDamagePercent = 0.35f;
+
+    [ExportGroup("Melee — Heavy Lunge")]
+    [Export] public float HeavyWindup = 0.40f;
+    [Export] public float HeavyDamagePercent = 0.65f;
+    [Export] public float HeavyLungeRange = 3.0f;
+    [Export] public float HeavyRecovery = 0.6f;
+
+    [ExportGroup("Melee — Parry")]
+    [Export] public float ParryActiveWindow = 0.15f;
+    [Export] public float ParryCooldown = 3.0f;
+    [Export] public float ParryStaggerDuration = 0.5f;
+
+    [ExportGroup("Melee — Dash")]
+    [Export] public float DashCooldown = 4.0f;
+    [Export] public float DashDistance = 4.0f;
+    [Export] public float DashDuration = 0.18f;
+
+    [ExportGroup("Melee — Execute")]
+    [Export] public float ExecuteAnimationLock = 0.6f;
+    [Export] public float ExecuteBehindAngleDegrees = 60.0f;
+
+    [ExportGroup("Health / TTK")]
+    [Export] public float MaxHealth = 100.0f;
+
+    [ExportGroup("Respawn")]
+    [Export] public float RespawnTime = 1.5f;
+    [Export] public float RespawnTimeLastCall = 1.0f;
+    [Export] public float SpawnProtectionDuration = 1.5f;
+
+    [ExportGroup("Golden Knife")]
+    [Export] public float GoldenKnifeFirstSpawn = 45.0f;
+    [Export] public float GoldenKnifeRespawnDelay = 30.0f;
+    [Export] public float GoldenKnifeDuration = 20.0f;
+    [Export] public float GoldenKnifeScoreMultiplier = 2.0f;
+
+    [ExportGroup("Bounty")]
+    [Export] public int BountyAnnounceOnATear = 3;
+    [Export] public int BountyAnnounceSecond = 5;
+    [Export] public int BountyAnnounceThird = 8;
+
+    [ExportGroup("Match")]
+    [Export] public int ScoreTargetDuelPit = 25;
+    [Export] public int ScoreTargetChaos = 40;
+    [Export] public float MatchTimeLimitSeconds = 480.0f; // 8 min
+    [Export] public float LastCallThresholdPercent = 0.75f;
+    [Export] public float DeathCamDuration = 1.5f;
+
+    [ExportGroup("Ability grammar — hard rules (CHARACTER-SPEC.md Part 1)")]
+    [Export] public float MinAbilityTellTime = 0.3f;
+    [Export] public float MaxControlEffectDuration = 1.0f;
+    [Export] public float AbilityCooldownMin = 12.0f;
+    [Export] public float AbilityCooldownMax = 25.0f;
+
+    [ExportGroup("Networking")]
+    [Export] public int ServerTickRateHz = 30;
+    [Export] public float MaxRewindTimeSeconds = 0.2f; // 200ms, GDD §4
+    [Export] public float InterpolationDelaySeconds = 0.1f; // 100ms
+}

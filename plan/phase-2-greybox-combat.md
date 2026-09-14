@@ -18,7 +18,7 @@
 
 ## Tasks
 - [ ] Combat state machine + server resolution of all verbs.
-- [ ] Health, death, **ragdoll** on kill (Jolt), 1.5s respawn, spawn furthest from largest cluster, 1.5s spawn protection shimmer (cancelled on attack).
+- [ ] Health, death, **procedural primitive ragdoll** on kill (capsule/sphere `PhysicalBone3D` rig, Jolt-driven — no external art asset; revisit with a real skinned mesh only at the Phase 5 art pass, from an asset the user explicitly picks), 1.5s respawn, spawn furthest from largest cluster, 1.5s spawn protection shimmer (cancelled on attack).
 - [ ] Feedback: hit spark, directional hit sound, hitstop, confetti/blood burst, screen shake (all presentation-only — Pillar 1).
 - [ ] **Killfeed** naming killer + method; **1.5s death cam** (Pillar 2 requirements).
 - [ ] Off-screen attacker directional indicator.

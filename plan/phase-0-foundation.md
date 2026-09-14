@@ -5,32 +5,36 @@
 **Gate:** a new team member can clone → open in Godot 4.7 → press one button (or `make run-local`) and see two capsules in the same room.
 
 ## Tasks
-- [ ] `git init`, extend `.gitignore` (`.godot/`, `export/`, `*.tmp`), first commit.
-- [ ] Confirm D1 (language). If C#: install .NET 8 SDK and verify build; if GDScript: nothing to install.
-- [ ] Folder layout:
+- [x] Git — already initialized by the user (`origin` = `github.com/Hussain7Abbas/the-room`).
+- [x] Language confirmed: **C#**. `.NET SDK 10.0.401` at `/usr/local/share/dotnet` (not on default PATH — Makefile adds it). Godot.NET.Sdk pinned to `4.7.2`, TFM `net8.0`. `The Room.sln` / `The Room.csproj` created and building clean.
+- [x] Folder layout (created so far; `combat/`, `abilities/`, `characters/`, `match/`, `ui/` are still empty — Phase 2/3 territory):
   ```
   res://
-    core/         # net, match state, tuning loader, autoloads
-    combat/       # melee verbs, hit resolution, health
-    player/       # player scene, controller, camera, input
-    abilities/    # ability base class + one folder per character
-    characters/   # one folder per developer (owned by them)
-    match/        # bounty, golden knife, last call, scoring, respawn
-    ui/           # HUD, killfeed, scoreboard, awards
-    maps/room/    # the arena
-    tuning/       # tuning.tres + Tuning.gd resource class
-    tests/        # GUT or gdUnit4 tests
+    core/         # Net.cs, Events.cs, TuningService.cs, Main.cs + Main.tscn  ✅
+    player/       # Player.cs + Player.tscn (movement + 3rd-person camera)    ✅
+    maps/room/    # Room.tscn (grey-box arena)                                ✅
+    tuning/       # Tuning.cs + tuning.tres                                   ✅
+    combat/ abilities/ characters/ match/ ui/  — not created yet, Phase 2/3
   ```
-- [ ] `Tuning` custom `Resource` class + `tuning.tres` with every number from GDD §5 pre-filled (light 0.12s/35%, heavy 0.40s/65%/3m, parry 0.15s window/3s CD/0.5s stagger, dash ~4s CD, execute lock 0.6s, respawn 1.5s/1.0s, spawn protection 1.5s, golden knife 45s/30s/20s, score 25/8min, chaos 40, Last Call 75%).
-- [ ] Autoloads: `Net` (host/join/server bootstrap), `Tuning` (loads the .tres), `Events` (signal bus).
-- [ ] Command-line boot: `--server`, `--connect <ip>`, `--name <player>`; headless detection via `DisplayServer.get_name() == "headless"`.
-- [ ] Input map: move (WASD), aim (mouse), light (LMB), heavy (RMB), parry (Q / MMB), dash (Space), ability (E), scoreboard (Tab).
-- [ ] Grey-box room: floor, walls, a centre plinth, 2–3 pillars (broken sightlines), one ramp (verticality). CSG only.
-- [ ] Makefile (via `makefile-standards`): `run-server`, `run-client`, `run-local N=4`, `export-server` (Linux headless), `export-client` (Windows), `test`.
-- [ ] Test framework installed (gdUnit4 or GUT) with one passing test.
+- [x] `Tuning` custom `Resource` subclass (`tuning/Tuning.cs`) + `tuning/tuning.tres` with every number from GDD §5 pre-filled.
+- [x] Autoloads registered in `project.godot`: `Net`, `Tuning` (→ `TuningService.cs`), `Events`.
+- [x] Command-line boot implemented in `core/Net.cs`: `--server`, `--connect=<ip>`, `--port=<port>`, `--name=<name>`; headless auto-detected via `DisplayServer.GetName() == "headless"` **unless** `--connect` is also given (needed for headless bot clients from Phase 1 on). No flags → fully offline single-player mode.
+  - ⚠️ Found & fixed during testing: `OS.GetCmdlineArgs()` does **not** return user args after `--`; must use `OS.GetCmdlineUserArgs()`. Verified with a real two-process ENet server+client handshake (headless, ports 60010+).
+- [x] Input map added to `project.godot`: move (WASD), light (LMB), heavy (RMB), parry (Q), dash (Space), ability (E), scoreboard (Tab). Aim is mouse-look (always active); `ui_cancel` (Esc, built-in) toggles mouse capture.
+- [x] Grey-box room (`maps/room/Room.tscn`): 40×40 floor, 4 walls, centre plinth (Golden Knife spot), 3 pillars (broken sightlines), one ramp + platform (verticality test), 6 perimeter spawn markers, directional light + environment.
+- [x] Third-person camera rig: `SpringArm3D` (pitch, mouse-look, clamped -60°/+70°) under a `CameraPivot`, body yaws with mouse X. Grey-box only — readability/distance tuning happens in Phase 2 at real player counts.
+- [x] `Main.tscn`/`Main.cs`: spawns a `Player` per connected peer via `MultiplayerSpawner` (auto-replicates to clients, no manual spawn RPCs needed), cycling through the room's spawn markers. Works offline (spawns local peer 1 immediately) and networked.
+- [x] Makefile (via `makefile-standards`): `help`, `install`, `setup`, `build`, `run-server`, `run-client`, `run-local N=<count>`, `clean`, `test` (stub), `export-server`/`export-client` (stubs — need `export_presets.cfg`, not created yet). Verified: `make -n help`, `make help`, `make build`, `make run-server` all run clean.
+- [ ] **Test framework — deferred.** gdUnit4 (C# support) needs both an editor addon and a NuGet package; GoDotTest is NuGet-only but still needs a Godot-aware host to run against `GodotSharp`. Neither is a small add given the current scope — picking this up properly belongs in Phase 1 alongside the debug/telemetry tooling, rather than wiring something half-usable now. `make test` exists as a stub that says so.
+
+## Verification done
+- `dotnet build "The Room.sln"` — 0 errors, 0 warnings.
+- Headless run (`--headless`) loads `Main.tscn`, `TuningService` loads `tuning.tres`, `Net` starts a server — no console errors.
+- Two-process test: one headless `--server` + one headless `--connect` instance completed a real ENet handshake (`[Net] Peer connected: <id>` on the server, `[Net] Connected to ... as peer <id>` on the client).
+- `make help` renders correctly with colorized, grouped sections.
 
 ## Deliverables
-Runnable project, tuning file, Makefile, empty-but-correct folder structure, README with the run commands.
+Runnable project, tuning file, Makefile, folder structure, README with run commands. **All done** except the test framework (see above — carried to Phase 1).
 
 ## Out of scope
-Any combat, any art, any ability.
+Any combat, any art, any ability. (Player can currently only walk and look around — no verbs yet.)

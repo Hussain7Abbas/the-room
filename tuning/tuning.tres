@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="Tuning" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tuning/Tuning.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+LightWindup = 0.12
+LightDamagePercent = 0.35
+HeavyWindup = 0.4
+HeavyDamagePercent = 0.65
+HeavyLungeRange = 3.0
+HeavyRecovery = 0.6
+ParryActiveWindow = 0.15
+ParryCooldown = 3.0
+ParryStaggerDuration = 0.5
+DashCooldown = 4.0
+DashDistance = 4.0
+DashDuration = 0.18
+ExecuteAnimationLock = 0.6
+ExecuteBehindAngleDegrees = 60.0
+MaxHealth = 100.0
+RespawnTime = 1.5
+RespawnTimeLastCall = 1.0
+SpawnProtectionDuration = 1.5
+GoldenKnifeFirstSpawn = 45.0
+GoldenKnifeRespawnDelay = 30.0
+GoldenKnifeDuration = 20.0
+GoldenKnifeScoreMultiplier = 2.0
+BountyAnnounceOnATear = 3
+BountyAnnounceSecond = 5
+BountyAnnounceThird = 8
+ScoreTargetDuelPit = 25
+ScoreTargetChaos = 40
+MatchTimeLimitSeconds = 480.0
+LastCallThresholdPercent = 0.75
+DeathCamDuration = 1.5
+MinAbilityTellTime = 0.3
+MaxControlEffectDuration = 1.0
+AbilityCooldownMin = 12.0
+AbilityCooldownMax = 25.0
+ServerTickRateHz = 30
+MaxRewindTimeSeconds = 0.2
+InterpolationDelaySeconds = 0.1
