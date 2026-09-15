@@ -34,6 +34,9 @@
 - `MatchClock.cs`, `ScoreboardView.cs`, `ResultsView.cs`: the in-game clock and final 5…1,
   the Tab scoreboard and the results podium, added by `core/KillfeedUI` (which keeps the
   killfeed and the announcement banner). All read `MatchServer.Instance`.
+- `Wiki.cs` + `WikiView.cs`: the in-game player wiki (the `wiki/*.md` pages): markdown →
+  BBCode, page tabs, links and anchors, Back, full-text search. The main menu's Wiki page and
+  `WikiDialog` in the pause menu. Page rules are in `wiki/CLAUDE.md`.
 - `PaginationBar.cs`: reusable pager. It raises `PageRequested(page, size)`; call `SetPage` with
   what the server returned.
 

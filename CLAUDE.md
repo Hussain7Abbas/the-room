@@ -1,9 +1,10 @@
 # CLAUDE.md — The Room
 
-> **Keep this file in sync.** When you change the project's structure, commands, rules or
-> conventions, or notice the user has, update this file in the same change, along with the
-> matching `docs/` page and any directory `CLAUDE.md` it affects. A stale CLAUDE.md is a bug:
-> fix it as soon as you spot one.
+> **Self-update rule: keep this file in sync.** When you change the project's structure,
+> commands, rules or conventions, or notice the user has, update this file in the same change,
+> along with the matching `docs/` page, the matching `wiki/` page (anything a player sees) and any
+> directory `CLAUDE.md` it affects. A stale CLAUDE.md, doc or wiki page is a bug: fix it as soon
+> as you spot one.
 
 ## What this is
 
@@ -37,7 +38,8 @@ shape code decisions:
 | `tools/` | Dev tools (`AnimationPreview`, `bake_knife.gd`, `build_arena.gd`) | |
 | `deploy/` | nginx + systemd files for the VPS | |
 | `plan/` | Phased build plan; `plan/main.md` is the progress + change log | |
-| `docs/` | Project documentation; start at `docs/intro.md` | |
+| `docs/` | Project documentation for developers; start at `docs/intro.md` | |
+| `wiki/` | **Player wiki** (rules, controls, map…), shown on GitHub and in the game (menu → Wiki); start at `wiki/intro.md` | ✅ |
 
 ## Commands
 
@@ -116,3 +118,14 @@ shell, `export PATH="/usr/local/share/dotnet:$PATH"`. Godot is `/Applications/Go
   `docs/deployment.md`.
 - The user edited code: check whether docs or CLAUDE.md now say something false, and fix them.
 - Add a change-log line to `plan/main.md` for each meaningful piece of work.
+
+## Wiki rule (always)
+
+`wiki/` is the **player** wiki: how the game works, for players, on GitHub and in the game
+(main menu → Wiki, pause menu → Wiki). In the **same change** as anything a player would notice
+(rules, numbers in `tuning.tres`, controls, HUD or menus, the map, settings, characters):
+
+- Update the matching wiki page, and retake its screenshots if what they show changed.
+- New feature: add a page or section, link it from `wiki/intro.md`, follow `wiki/CLAUDE.md`
+  (page template, writing rules, supported markdown, screenshot rules).
+- `make test` checks every wiki link, anchor and image.

@@ -22,7 +22,7 @@ public partial class MainMenu : Control
     private const double RoomRefreshSeconds = 5.0;
     private const double NewRoomStartTimeoutSeconds = 10.0;
 
-    private enum Page { Play, History, Leaderboard }
+    private enum Page { Play, History, Leaderboard, Wiki }
 
     private readonly Dictionary<Page, Button> _nav = new();
     private readonly Dictionary<Page, Control> _pages = new();
@@ -168,6 +168,7 @@ public partial class MainMenu : Control
         _pages[Page.Play] = BuildPlayPage();
         _pages[Page.History] = BuildHistoryPage();
         _pages[Page.Leaderboard] = BuildLeaderboardPage();
+        _pages[Page.Wiki] = new WikiView();
         foreach (var page in _pages.Values)
             content.AddChild(page);
 
@@ -244,6 +245,7 @@ public partial class MainMenu : Control
         Add(Page.Play, "Play");
         Add(Page.History, "Match history");
         Add(Page.Leaderboard, "Leaderboard");
+        Add(Page.Wiki, "Wiki");
         nav.AddChild(new HSeparator());
 
         var practice = UiTheme.Button("Practice alone", "NavButton", OnPractice);
@@ -503,6 +505,7 @@ public partial class MainMenu : Control
         {
             if (arg == "--menu-page=history") return Page.History;
             if (arg == "--menu-page=leaderboard") return Page.Leaderboard;
+            if (arg == "--menu-page=wiki") return Page.Wiki;
         }
         return Page.Play;
     }

@@ -17,6 +17,7 @@ code: see "Keeping docs current" below.
 | ├ [Networking](architecture/networking.md) | server authority, prediction, interpolation, lag compensation, RPC patterns |
 | ├ [Sessions & scenes](architecture/sessions-and-scenes.md) | menu → room → menu, practice, how a join connects |
 | └ [Match loop](architecture/match-loop.md) | scoring, bounty, Golden Knife, Last Call, results, reporting |
+| [Player wiki](../wiki/intro.md) | how to play (rules, controls, map): the pages players read, also in the game |
 | [Audio, effects and graphics](audio-and-effects.md) | music, sound effects, blood and dust, texture quality |
 | [Gameplay](gameplay/Intro.md) | the rules players experience |
 | ├ [Combat](gameplay/combat.md) | light, heavy, execute, dodge, sprint, jump |

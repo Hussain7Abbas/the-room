@@ -5,6 +5,8 @@ developer who built them. Made by the **Voidra** team with Godot 4.7 (.NET / C#)
 
 ![Gameplay](docs/images/gameplay.png)
 
+**New to the game? Read the [player wiki](wiki/intro.md)** — rules, controls, the map and tips. It's also in the game: main menu → **Wiki**.
+
 ## Features
 
 - **Third-person knife combat:** light, heavy lunge, execute from behind, an invulnerable dodge

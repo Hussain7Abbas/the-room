@@ -27,6 +27,9 @@ Launching with `--server` or `--connect` skips the menu. For screenshots:
 
 - `--menu-page=history|leaderboard` opens the menu on that page;
 - `--menu-open=settings|graphics|controls|sound|about` opens that dialog (or Settings tab) on top.
+- **Wiki** (nav page, and a button in the pause menu): the player wiki from `wiki/*.md`, with
+  page tabs, links, Back and full-text search (`ui/Wiki.cs`, `ui/WikiView.cs`). `--menu-page=wiki`
+  opens it. See `wiki/CLAUDE.md` for the page rules.
 - Every screen can be driven without the mouse: arrows + Enter + Esc on the keyboard (after the
   first arrow press), or the D-pad/stick + A + B on a controller (`core/InputDevices.cs`).
 

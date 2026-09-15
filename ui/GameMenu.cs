@@ -111,6 +111,7 @@ public partial class GameMenu : CanvasLayer
 
         box.AddChild(UiTheme.Button("Resume", "AccentButton", () => SetOpen(false)));
         box.AddChild(UiTheme.Button("Settings", onPressed: () => _root.AddChild(new SettingsDialog())));
+        box.AddChild(UiTheme.Button("Wiki", onPressed: () => _root.AddChild(new WikiDialog())));
         _leave = UiTheme.Button("Leave room", onPressed: () => Net.Instance.Leave());
         box.AddChild(_leave);
         box.AddChild(UiTheme.Label("Esc to close  ·  Tab for the scoreboard", "Muted", fontSize: 12));
