@@ -50,6 +50,9 @@ public partial class Tuning : Resource
 
     [ExportGroup("Health / TTK")]
     [Export] public float MaxHealth = 100.0f;
+    [Export] public float HealthRegenDelay = 3.0f;    // seconds without being hit before healing starts
+    [Export] public float HealthRegenAmount = 1.0f;   // HP per heal tick
+    [Export] public float HealthRegenInterval = 1.0f; // seconds between heal ticks
 
     [ExportGroup("Respawn")]
     [Export] public float RespawnTime = 1.5f;

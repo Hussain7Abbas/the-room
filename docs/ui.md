@@ -30,6 +30,19 @@ Launching with `--server` or `--connect` skips the menu. For screenshots:
 - Every screen can be driven without the mouse: arrows + Enter + Esc on the keyboard (after the
   first arrow press), or the D-pad/stick + A + B on a controller (`core/InputDevices.cs`).
 
+## In game: match clock, scoreboard and results (`core/KillfeedUI` hosts them)
+
+- **Match clock** (`ui/MatchClock.cs`): the time left at the top centre, red during Last Call.
+  In the last 5 seconds a huge red 5…1 fills the middle of the screen at 50% opacity, popping
+  in with a tick each second.
+- **Scoreboard** (`ui/ScoreboardView.cs`, hold Tab / the controller's View): the main menu's
+  style (dark card, display-font title) with rank, player, score, kills, deaths and bounty.
+  Your row is outlined in red and the leader's rank is gold.
+- **Results** (`ui/ResultsView.cs`, the whole results window): "MATCH OVER", the next-match
+  countdown, everyone from 4th down in a list, and under it the podium: 2nd (silver),
+  1st, the MVP (gold, largest, pulsing gold glow) and 3rd (bronze), each smaller than the last.
+  It rebuilds when the final standings arrive, even if they come after the "match over" state.
+
 ## In game: the HUD (`ui/PlayerHud.cs`, top-left, clients only)
 
 - **Name** in the character's colour, and **HP** as numbers.

@@ -31,6 +31,9 @@
   damage chip), stamina and the ability cooldown tile. It reads `Player.HealthFraction`,
   `StaminaFraction`, `IsExhausted` and `AbilityCooldownRemaining/Total`. The top-left is the HUD's;
   the debug overlay lives bottom-left (debug builds, F3).
+- `MatchClock.cs`, `ScoreboardView.cs`, `ResultsView.cs`: the in-game clock and final 5…1,
+  the Tab scoreboard and the results podium, added by `core/KillfeedUI` (which keeps the
+  killfeed and the announcement banner). All read `MatchServer.Instance`.
 - `PaginationBar.cs`: reusable pager. It raises `PageRequested(page, size)`; call `SetPage` with
   what the server returned.
 

@@ -31,3 +31,6 @@ Why: character owners control an ability's *shape* in code, and this file contro
 **Testing tip:** to watch whole matches quickly, shorten `MatchTimeLimitSeconds`,
 `LastCallTimeRemainingSeconds` and `ResultsScreenDurationSeconds` locally. **Restore them before
 committing.** See [Testing](../testing.md).
+
+Health regeneration: `HealthRegenDelay` (3 s without a hit before healing starts),
+`HealthRegenAmount` (+1 HP per tick) and `HealthRegenInterval` (1 s between ticks).

@@ -134,3 +134,7 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
   - Controller menus: A/Cross presses the focused button inside dialogs (the focus used to stay on the menu behind a newly opened dialog, so A seemed to do nothing), focus is trapped in the top dialog, lists follow the focus and scroll when down goes nowhere.
   - README/docs images re-rendered on the new arena (gameplay with the beam, menu, Settings → Controls).
 - 2026-09-15 — Keyboard menu navigation: arrow keys start it (buttons become focusable, the first is highlighted), Enter presses, Esc goes back, a mouse click ends it. Shares the controller's focus trapping and scrolling (`InputDevices.IsNavigating`).
+- 2026-09-15 — Regeneration, match clock, new scoreboard and results:
+  - +1 HP per second after 3 s without a hit (tuning: HealthRegenDelay/Amount/Interval), server-side; green "+" particles on the healing player for everyone (`Fx.Heal`, `BroadcastHeal`). Verified in a networked bot match.
+  - `ui/MatchClock`: time at the top centre; big 50%-transparent red 5…1 countdown with a tick (Kenney CC0 metal click).
+  - `ui/ScoreboardView` (Tab) restyled in the menu's brand; `ui/ResultsView`: others listed above a gold/silver/bronze podium (MVP largest, pulsing gold glow). Old grey-box panels removed from KillfeedUI.tscn.

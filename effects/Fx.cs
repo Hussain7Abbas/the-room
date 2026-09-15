@@ -141,6 +141,54 @@ public static class Fx
         FreeAfter(puff, (float)puff.Lifetime + 0.2f);
     }
 
+    private static QuadMesh? _plusMesh;
+    private static readonly Color HealColor = new(0.45f, 1f, 0.5f);
+
+    /// <summary>A heal tick: a few green "+" signs rise from the player's body and fade. Parented to
+    /// the player so they drift up with them while they move.</summary>
+    public static void Heal(Node3D player)
+    {
+        if (SceneRoot(player) is null)
+            return;
+        _plusMesh ??= Quad(PlusTexture());
+        var plus = new CpuParticles3D
+        {
+            Mesh = _plusMesh,
+            OneShot = true,
+            Amount = 5,
+            Lifetime = 1.2,
+            Explosiveness = 0.6f,
+            EmissionShape = CpuParticles3D.EmissionShapeEnum.Box,
+            EmissionBoxExtents = new Vector3(0.35f, 0.55f, 0.35f), // the body (origin is its middle)
+            Direction = Vector3.Up,
+            Spread = 10f,
+            InitialVelocityMin = 0.7f,
+            InitialVelocityMax = 1.3f,
+            Gravity = Vector3.Zero,
+            ScaleAmountMin = 0.16f,
+            ScaleAmountMax = 0.26f,
+            ColorRamp = Fade(HealColor, 1f, 0.55f),
+        };
+        player.AddChild(plus);
+        plus.Emitting = true;
+        FreeAfter(plus, 1.5f);
+    }
+
+    /// <summary>A white "+" with a soft dark edge (so it reads on bright floors), drawn once.</summary>
+    private static ImageTexture PlusTexture()
+    {
+        const int size = 64;
+        var image = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+        image.Fill(new Color(0, 0, 0, 0));
+        void Bar(Rect2I rect, Color color) => image.FillRect(rect, color);
+        var edge = new Color(0.05f, 0.25f, 0.08f, 0.8f);
+        Bar(new Rect2I(24, 6, 16, 52), edge);
+        Bar(new Rect2I(6, 24, 52, 16), edge);
+        Bar(new Rect2I(27, 9, 10, 46), Colors.White);
+        Bar(new Rect2I(9, 27, 46, 10), Colors.White);
+        return ImageTexture.CreateFromImage(image);
+    }
+
     /// <summary>Where the ground is under a point: the first static surface, ignoring players.</summary>
     private static float? FloorBelow(Node from, Vector3 at)
     {

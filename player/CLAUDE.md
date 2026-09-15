@@ -32,6 +32,9 @@
   (`StartDodge(predicted: true)`) and the server runs it for real. `IsDodging` hides the hitbox
   in `CombatServer`. There is no parry and no dash any more.
 - **Sprint** is Shift (or LT) held, sent every tick in `SubmitInput` and applied in `SimulateStep`.
+- **Health regeneration** (`ServerTickRegen`) runs where the combat state does (server and
+  practice). `ServerApplyDamage` resets its wait. Each heal tick cues `BroadcastHeal` for the "+"
+  effect; the health value itself reaches clients through `ReceiveServerState`.
 - **Stamina** (`UpdateStamina`, `SpendStamina`) gates sprint and dodge. It runs in `SimulateStep`,
   on the server (authoritative) and on the owner (predicted). `ReceiveServerState` carries health
   and stamina; the owner snaps its stamina only when it drifts by more than 12.

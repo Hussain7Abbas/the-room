@@ -15,19 +15,6 @@ offset_right = -12.0
 offset_bottom = 160.0
 alignment = 0
 
-[node name="ScoreboardPanel" type="PanelContainer" parent="."]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -160.0
-offset_top = -120.0
-offset_right = 160.0
-offset_bottom = 120.0
-
-[node name="ScoreboardList" type="VBoxContainer" parent="ScoreboardPanel"]
-
 [node name="AnnouncementLabel" type="Label" parent="."]
 anchors_preset = 5
 anchor_left = 0.5
@@ -40,16 +27,3 @@ theme_override_font_sizes/font_size = 28
 horizontal_alignment = 1
 text = ""
 
-[node name="ResultsPanel" type="PanelContainer" parent="."]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -220.0
-offset_top = -220.0
-offset_right = 220.0
-offset_bottom = 220.0
-
-[node name="ResultsList" type="VBoxContainer" parent="ResultsPanel"]
-alignment = 1

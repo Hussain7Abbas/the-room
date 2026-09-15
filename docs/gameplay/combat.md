@@ -34,7 +34,12 @@ There is **no parry**: the dodge replaced it (decision D7 in `plan/main.md`).
 
 The server tracks it, and your screen predicts it.
 
-Health is 100. You respawn after 1.5 s (1.0 s during Last Call), with 1.5 s of spawn protection
+Health is 100. **Regeneration:** after 3 s without being hit you heal +1 HP every second, up to
+full; any hit restarts the 3 s wait. The server does it (`Player.ServerTickRegen`), and every
+player sees green "+" signs rise from a healing player. The numbers are `HealthRegenDelay`,
+`HealthRegenAmount` and `HealthRegenInterval` in `tuning.tres`.
+
+You respawn after 1.5 s (1.0 s during Last Call), with 1.5 s of spawn protection
 (a pulsing pale shimmer; the texture stays visible). The server starts and cancels it and tells
 every client, so everyone sees the same shimmer. Protection ends the moment you attack, roll or
 use your ability. At 0 health your character plays its **death animation** and stays down until

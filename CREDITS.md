@@ -33,7 +33,7 @@ Blood drops, droplets and dust puffs use textures from Kenney's
 | Sound | Source | Where |
 |---|---|---|
 | Background music: "EmptyCity" by yd | [OpenGameArt](https://opengameart.org/content/emptycity-background-music), CC0 | `assets/audio/music/empty_city.ogg` |
-| Swing, jump, roll (knife slices, cloth) | Kenney [RPG Audio](https://kenney.nl/assets/rpg-audio), CC0 | `assets/audio/sfx/` |
+| Swing, jump, roll (knife slices, cloth), countdown tick (metal click) | Kenney [RPG Audio](https://kenney.nl/assets/rpg-audio), CC0 | `assets/audio/sfx/` |
 | Landing, footsteps, kick, death, menu click | Kenney [Impact Sounds](https://kenney.nl/assets/impact-sounds), CC0 | `assets/audio/sfx/` |
 
 ## Characters

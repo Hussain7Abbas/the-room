@@ -366,6 +366,7 @@ public partial class Player : CharacterBody3D
         {
             TickCombatState((float)delta);
             _ability?.Tick((float)delta);
+            ServerTickRegen((float)delta);
             RunServerPhysics(delta);
         }
         else if (_isOwner && !_isOffline)
@@ -376,6 +377,7 @@ public partial class Player : CharacterBody3D
         {
             TickCombatState((float)delta); // offline: this instance is also its own authority
             _ability?.Tick((float)delta);
+            ServerTickRegen((float)delta);
             RunOfflinePhysics(delta);
         }
         // Remote-view clients simulate nothing here — see InterpolateRemote() in _Process.
@@ -1077,6 +1079,8 @@ public partial class Player : CharacterBody3D
         if (!_isServer || IsDead || !IsInsideTree())
             return;
 
+        _secondsSinceHit = 0f; // any hit restarts the wait before healing
+        _regenTimer = 0f;
         _health -= amount;
         if (_health > 0f)
             return;
@@ -1096,6 +1100,46 @@ public partial class Player : CharacterBody3D
         // Last Call (GDD §5.6) drops respawn to 1s so the closing arena stays a real climax
         // instead of a slow trickle back in.
         GetTree().CreateTimer(MatchServer.Instance.CurrentRespawnTime).Timeout += ServerRespawn;
+    }
+
+    private float _secondsSinceHit;
+    private float _regenTimer;
+
+    /// <summary>Server (and practice): after <c>HealthRegenDelay</c> seconds without being hit, heal
+    /// <c>HealthRegenAmount</c> every <c>HealthRegenInterval</c>. Health reaches clients through
+    /// ReceiveServerState like any other change; the "+" effect is a separate cue.</summary>
+    private void ServerTickRegen(float delta)
+    {
+        var tuning = TuningService.Instance;
+        if (IsDead)
+        {
+            _secondsSinceHit = 0f;
+            return;
+        }
+        _secondsSinceHit += delta;
+        if (_secondsSinceHit < tuning.HealthRegenDelay || _health >= tuning.MaxHealth)
+        {
+            _regenTimer = 0f;
+            return;
+        }
+        _regenTimer += delta;
+        if (_regenTimer < tuning.HealthRegenInterval)
+            return;
+        _regenTimer -= tuning.HealthRegenInterval;
+        _health = Mathf.Min(tuning.MaxHealth, _health + tuning.HealthRegenAmount);
+        if (_isOffline)
+            Fx.Heal(this);
+        else
+            Rpc(nameof(BroadcastHeal));
+    }
+
+    /// <summary>Everyone sees a healing player: green "+" signs drift up from their body.</summary>
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Unreliable)]
+    private void BroadcastHeal()
+    {
+        if (_isServer || Multiplayer.GetRemoteSenderId() != 1)
+            return; // the dedicated server draws nothing
+        Fx.Heal(this);
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = true, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]

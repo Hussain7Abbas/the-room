@@ -31,6 +31,7 @@ To add a sound, drop in `mysound_1.ogg` (and `_2`, `_3` for variety) and call it
 | `kick` | the drop kick's feet come down |
 | `death` | a player dies |
 | `ui_click` | any menu button |
+| `tick` | each second of the final 5…1 countdown |
 
 ## Effects (`effects/Fx.cs`)
 
@@ -41,6 +42,8 @@ To add a sound, drop in `mysound_1.ogg` (and `_2`, `_3` for variety) and call it
   blood drops appear on the floor where the spray comes down. They are decals, so they follow the
   surface (floor, deck, crate top). Each drop fades out in its last second and is **gone 3 s after
   the hit**.
+- **Healing:** each heal tick (+1 HP) sends a few green "+" signs up from the healing player's
+  body, seen by every player (`Fx.Heal`, cued by `Player.BroadcastHeal`).
 - **Dust:** a puff **on the floor** under the player (snapped with a downward ray, so it sits
   on the ground, a deck or a crate top; none in mid-air) when you jump, land (any height; bigger for a bigger fall),
   sprint (a small puff every step), roll (a trail along the roll) and when the drop kick lands.

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using TheRoom.UI;
 
 namespace TheRoom.Core;
 
@@ -10,7 +11,8 @@ namespace TheRoom.Core;
 /// Golden Knife/match results (core/MatchServer.cs). Purely a listener on Events.PlayerKilled
 /// and Events.MatchAnnouncement — no direct Player/MatchServer reference needed for the listed
 /// events, though the scoreboard does read MatchServer.Instance directly for score/bounty
-/// numbers. Grey-box text UI; a styled version is Phase 5 art-pass territory.
+/// numbers. The clock, scoreboard and results screens are ui/MatchClock, ScoreboardView and
+/// ResultsView.
 /// </summary>
 public partial class KillfeedUI : CanvasLayer
 {
@@ -19,11 +21,9 @@ public partial class KillfeedUI : CanvasLayer
     private const double AnnouncementLifetime = 4.0;
 
     private VBoxContainer _killfeedList = null!;
-    private Control _scoreboardPanel = null!;
-    private VBoxContainer _scoreboardList = null!;
+    private ScoreboardView _scoreboard = null!;
     private Label _announcementLabel = null!;
-    private Control _resultsPanel = null!;
-    private VBoxContainer _resultsList = null!;
+    private ResultsView _results = null!;
 
     private readonly List<(Label label, double expiresAt)> _killfeedLines = new();
     private readonly Dictionary<long, int> _kills = new();
@@ -33,14 +33,16 @@ public partial class KillfeedUI : CanvasLayer
     public override void _Ready()
     {
         _killfeedList = GetNode<VBoxContainer>("KillfeedList");
-        _scoreboardPanel = GetNode<Control>("ScoreboardPanel");
-        _scoreboardList = GetNode<VBoxContainer>("ScoreboardPanel/ScoreboardList");
         _announcementLabel = GetNode<Label>("AnnouncementLabel");
-        _resultsPanel = GetNode<Control>("ResultsPanel");
-        _resultsList = GetNode<VBoxContainer>("ResultsPanel/ResultsList");
-        _scoreboardPanel.Visible = false;
         _announcementLabel.Visible = false;
-        _resultsPanel.Visible = false;
+
+        // Built in C# with UiTheme (ui/): the match clock + final countdown, the Tab scoreboard
+        // and the results podium. Added in this order so the results screen draws on top.
+        AddChild(new MatchClock());
+        _scoreboard = new ScoreboardView(id => _kills.GetValueOrDefault(id), id => _deaths.GetValueOrDefault(id)) { Visible = false };
+        AddChild(_scoreboard);
+        _results = new ResultsView { Visible = false };
+        AddChild(_results);
 
         Events.Instance.PlayerKilled += OnPlayerKilled;
         Events.Instance.MatchAnnouncement += OnMatchAnnouncement;
@@ -48,15 +50,11 @@ public partial class KillfeedUI : CanvasLayer
 
     public override void _Process(double delta)
     {
-        _scoreboardPanel.Visible = Input.IsActionPressed("scoreboard") && !MatchServer.Instance.IsResults;
-        if (_scoreboardPanel.Visible)
-            RebuildScoreboard();
+        _scoreboard.Visible = Input.IsActionPressed("scoreboard") && !MatchServer.Instance.IsResults;
 
-        // Short results screen (GDD §4/§7: "over-invested in relative to its build cost", "nobody
+        // Results screen (GDD §4/§7: "over-invested in relative to its build cost", "nobody
         // should leave during it") — shown automatically for the whole results window, no key held.
-        _resultsPanel.Visible = MatchServer.Instance.IsResults;
-        if (_resultsPanel.Visible)
-            RebuildResultsScreen();
+        _results.Visible = MatchServer.Instance.IsResults;
 
         var now = Time.GetTicksMsec() / 1000.0;
         for (var i = _killfeedLines.Count - 1; i >= 0; i--)
@@ -103,54 +101,5 @@ public partial class KillfeedUI : CanvasLayer
         _announcementLabel.Modulate = text.Contains("GOLDEN KNIFE") ? new Color(1f, 0.8f, 0.25f) : Colors.White;
         _announcementLabel.Visible = true;
         _announcementExpiresAt = Time.GetTicksMsec() / 1000.0 + AnnouncementLifetime;
-    }
-
-    private void RebuildResultsScreen()
-    {
-        foreach (var child in _resultsList.GetChildren())
-            child.QueueFree();
-
-        var match = MatchServer.Instance;
-        _resultsList.AddChild(new Label { Text = "MATCH OVER" });
-        _resultsList.AddChild(new Label { Text = match.LastMvpText });
-        _resultsList.AddChild(new Label { Text = "" });
-
-        foreach (var (name, score) in match.LastStandings)
-            _resultsList.AddChild(new Label { Text = $"{name,-16} {score} pts" });
-
-        if (match.LastAwards.Count > 0)
-        {
-            _resultsList.AddChild(new Label { Text = "" });
-            foreach (var award in match.LastAwards)
-                _resultsList.AddChild(new Label { Text = award });
-        }
-
-        _resultsList.AddChild(new Label { Text = "" });
-        _resultsList.AddChild(new Label { Text = $"Next match in {match.ResultsTimeRemaining:F0}s..." });
-    }
-
-    private void RebuildScoreboard()
-    {
-        foreach (var child in _scoreboardList.GetChildren())
-            child.QueueFree();
-
-        var match = MatchServer.Instance;
-        var allPeers = _kills.Keys.Union(_deaths.Keys).Union(Main.PlayerNames.Keys).Distinct()
-            .OrderByDescending(id => match.GetScore(id));
-
-        var header = match.IsLastCall ? "LAST CALL" : match.IsResults ? "RESULTS" : $"Score to {match.ScoreTarget}";
-        _scoreboardList.AddChild(new Label { Text = $"{header} — {match.MatchTimeRemaining:F0}s left" });
-
-        foreach (var peerId in allPeers)
-        {
-            var name = Main.GetPlayerName(peerId);
-            var score = match.GetScore(peerId);
-            var bounty = match.GetBounty(peerId);
-            var deaths = _deaths.GetValueOrDefault(peerId);
-            _scoreboardList.AddChild(new Label { Text = $"{name,-16} Score:{score,-4} Bounty:{bounty,-2} D:{deaths}" });
-        }
-
-        if (allPeers.Count() == 0)
-            _scoreboardList.AddChild(new Label { Text = "(no players yet)" });
     }
 }
