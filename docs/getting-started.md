@@ -53,6 +53,10 @@ work too and show Xbox icons. In menus, the D-pad or left stick moves between bu
 presses and B / Circle backs out; the focus stays inside an open dialog, and pressing down on
 the last button of a long page (Settings → Controls) scrolls the rest into view.
 
+**Keyboard menus:** press an arrow key in any menu to start keyboard navigation: the arrows move
+between buttons, **Enter** presses the highlighted one and **Esc** goes back (closes a dialog or
+the pause menu). Clicking with the mouse ends it, so no highlight is left behind for the mouse.
+
 The same list is in the game under **Settings → Controls**, where you can **rebind** it: the tab
 shows the device you're using, so rebinding with the keyboard changes keyboard keys and with a
 controller changes controller buttons (movement and camera stay on the sticks). **Settings → Display** switches

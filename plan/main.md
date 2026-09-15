@@ -133,3 +133,4 @@ Engine: **Godot 4.7.2 (mono build)**, Forward+, Jolt Physics, 3D.
   - The holder gets a gold light column into the sky + glow + sparks on every client (`effects/GoldenBeam`, `MatchServer.BroadcastKnifeHolder`); Golden Knife announcements show in gold.
   - Controller menus: A/Cross presses the focused button inside dialogs (the focus used to stay on the menu behind a newly opened dialog, so A seemed to do nothing), focus is trapped in the top dialog, lists follow the focus and scroll when down goes nowhere.
   - README/docs images re-rendered on the new arena (gameplay with the beam, menu, Settings → Controls).
+- 2026-09-15 — Keyboard menu navigation: arrow keys start it (buttons become focusable, the first is highlighted), Enter presses, Esc goes back, a mouse click ends it. Shares the controller's focus trapping and scrolling (`InputDevices.IsNavigating`).

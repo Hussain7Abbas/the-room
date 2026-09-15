@@ -181,7 +181,7 @@ public partial class SettingsDialog : ModalDialog
             Step = 1,
             CustomMinimumSize = new Vector2(190, 0),
             SizeFlagsVertical = SizeFlags.ShrinkCenter,
-            FocusMode = InputDevices.IsGamepad ? FocusModeEnum.All : FocusModeEnum.None,
+            FocusMode = InputDevices.IsNavigating ? FocusModeEnum.All : FocusModeEnum.None,
         };
         var value = UiTheme.Label("", fontSize: 14);
         value.CustomMinimumSize = new Vector2(44, 0);
@@ -234,7 +234,7 @@ public partial class SettingsDialog : ModalDialog
             _ => "Keyboard & mouse",
         }, fontSize: 17));
         var hint = UiTheme.Label(kind == InputBindings.Kind.Keyboard
-            ? "Click a binding, then press the new key or mouse button (Esc cancels). Press any controller button to see the controller's."
+            ? "Click a binding (or select it with the arrows and Enter), then press the new key or mouse button (Esc cancels). Press any controller button to see the controller's."
             : "Select a binding, then press the new button (Start / Options cancels). Press any key to see the keyboard's.", "Muted", fontSize: 12);
         hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         headerText.AddChild(hint);
@@ -285,7 +285,7 @@ public partial class SettingsDialog : ModalDialog
         note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         list.AddChild(note);
 
-        if (focusAction is not null && InputDevices.IsGamepad && _bindButtons.TryGetValue(focusAction, out var again))
+        if (focusAction is not null && InputDevices.IsNavigating && _bindButtons.TryGetValue(focusAction, out var again))
             again.CallDeferred(Control.MethodName.GrabFocus);
     }
 
@@ -295,7 +295,7 @@ public partial class SettingsDialog : ModalDialog
         {
             CustomMinimumSize = new Vector2(170, 36),
             IconAlignment = HorizontalAlignment.Center,
-            FocusMode = InputDevices.IsGamepad ? FocusModeEnum.All : FocusModeEnum.None,
+            FocusMode = InputDevices.IsNavigating ? FocusModeEnum.All : FocusModeEnum.None,
         };
         button.AddThemeConstantOverride("icon_max_width", 28);
         ShowBinding(button, action, kind);

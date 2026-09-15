@@ -12,14 +12,19 @@ public enum InputDevice { Keyboard, Xbox, PlayStation }
 /// (a PlayStation pad by its name, anything else counts as Xbox); any key or click switches back.
 /// Settings → Controls and the HUD show that device's bindings and button icons.
 ///
-/// The menus are mouse-first (their buttons don't take focus), so while a controller is active
-/// this also makes buttons focusable and keeps one focused, which lets the D-pad/stick and A
-/// drive every screen.
+/// The menus are mouse-first (their buttons don't take focus), so while a controller is active,
+/// or after an arrow key on the keyboard, this makes buttons focusable and keeps one focused:
+/// the D-pad/stick or arrows move, A/Cross or Enter press, B/Circle or Esc go back.
 /// </summary>
 public partial class InputDevices : Node
 {
     public static InputDevice Current { get; private set; } = InputDevice.Keyboard;
     public static bool IsGamepad => Current != InputDevice.Keyboard;
+
+    /// <summary>Menus are being driven without the mouse: by a controller, or by the keyboard
+    /// after an arrow key (Enter presses, Esc goes back). A mouse click ends keyboard navigation.</summary>
+    public static bool IsNavigating => IsGamepad || _keyboardNavigation;
+    private static bool _keyboardNavigation;
 
     /// <summary>Raised when <see cref="Current"/> changes.</summary>
     public static event Action? Changed;
@@ -67,10 +72,30 @@ public partial class InputDevices : Node
             InputEventMouseButton { Pressed: true } => InputDevice.Keyboard,
             _ => null,
         };
+        var wasNavigating = IsNavigating;
         if (next is { } device && device != Current)
             SetCurrent(device, @event.Device);
 
-        if (IsGamepad && Input.MouseMode != Input.MouseModeEnum.Captured)
+        // Keyboard: an arrow key in a menu starts navigation (the first press just shows the
+        // focus); a click hands the menus back to the mouse.
+        var menus = Input.MouseMode != Input.MouseModeEnum.Captured;
+        if (@event is InputEventKey { Pressed: true } && menus && !_keyboardNavigation && IsArrow(@event))
+        {
+            _keyboardNavigation = true;
+            if (!wasNavigating)
+            {
+                RefreshNavigation(wasNavigating);
+                GetViewport().SetInputAsHandled();
+                return;
+            }
+        }
+        else if (@event is InputEventMouseButton { Pressed: true } && _keyboardNavigation)
+        {
+            _keyboardNavigation = false;
+            RefreshNavigation(true);
+        }
+
+        if (IsNavigating && menus)
         {
             var down = @event.IsActionPressed("ui_down");
             var vertical = down || @event.IsActionPressed("ui_up");
@@ -143,6 +168,9 @@ public partial class InputDevices : Node
 
     private ulong _lastNudge;
 
+    private static bool IsArrow(InputEvent e) =>
+        e.IsActionPressed("ui_up") || e.IsActionPressed("ui_down") || e.IsActionPressed("ui_left") || e.IsActionPressed("ui_right");
+
     /// <summary>After up/down: if the focus didn't move (nothing focusable further that way) but
     /// its scroll area has more content, scroll it, so rows below the last button (and plain rows
     /// with nothing to press) can still be brought into view with the pad.</summary>
@@ -171,7 +199,7 @@ public partial class InputDevices : Node
 
     public override void _Process(double delta)
     {
-        if (!IsGamepad || Input.MouseMode == Input.MouseModeEnum.Captured)
+        if (!IsNavigating || Input.MouseMode == Input.MouseModeEnum.Captured)
             return;
         _focusCheckIn -= delta;
         if (_focusCheckIn > 0)
@@ -199,19 +227,25 @@ public partial class InputDevices : Node
 
     private void SetCurrent(InputDevice device, int joypad)
     {
-        var wasGamepad = IsGamepad;
+        var wasNavigating = IsNavigating;
         Current = device;
         GD.Print($"[Input] Now using {device}{(IsGamepad ? $" ({Input.GetJoyName(joypad)})" : "")}.");
-        if (IsGamepad != wasGamepad)
-        {
-            foreach (var node in GetTree().Root.FindChildren("*", "Control", true, false))
-                SetFocusable(node);
-            if (IsGamepad)
-                _focusCheckIn = 0;
-            else
-                GetViewport().GuiReleaseFocus(); // no focus rings left behind for the mouse
-        }
+        RefreshNavigation(wasNavigating);
         Changed?.Invoke();
+    }
+
+    /// <summary>Makes buttons focusable (or not) when navigation starts or stops, and puts the
+    /// focus somewhere useful, or clears it so no focus ring is left behind for the mouse.</summary>
+    private void RefreshNavigation(bool wasNavigating)
+    {
+        if (IsNavigating == wasNavigating)
+            return;
+        foreach (var node in GetTree().Root.FindChildren("*", "Control", true, false))
+            SetFocusable(node);
+        if (IsNavigating)
+            _focusCheckIn = 0;
+        else
+            GetViewport().GuiReleaseFocus();
     }
 
     private static void OnNodeAdded(Node node) => SetFocusable(node);
@@ -221,9 +255,9 @@ public partial class InputDevices : Node
         // LinkButtons and the menus' option pickers keep their own mode (they open the browser or
         // a popup); everything else follows the device.
         if (node is Button button and not OptionButton)
-            button.FocusMode = IsGamepad ? Control.FocusModeEnum.All : Control.FocusModeEnum.None;
+            button.FocusMode = IsNavigating ? Control.FocusModeEnum.All : Control.FocusModeEnum.None;
         else if (node is Slider slider) // Settings → Sound: left/right on the D-pad moves it
-            slider.FocusMode = IsGamepad ? Control.FocusModeEnum.All : Control.FocusModeEnum.None;
+            slider.FocusMode = IsNavigating ? Control.FocusModeEnum.All : Control.FocusModeEnum.None;
         else if (node is ScrollContainer scroll)
             scroll.FollowFocus = true; // moving the focus with the pad scrolls it into view
     }
